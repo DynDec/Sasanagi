@@ -91,7 +91,12 @@ data class Progress(
     /** Fraction of the whole version listened, for list indicators. */
     val fraction: Float = 0f,
     val finished: Boolean = false,
+    /** Where each version of the entry was left, so switching back to one resumes it. */
+    val versions: Map<String, Spot> = emptyMap(),
 )
+
+@Serializable
+data class Spot(val index: Int, val positionMs: Long)
 
 object Formats {
     val AUDIO = setOf("mp3", "wav", "flac", "m4a", "aac", "ogg", "oga", "opus", "mka", "webm")

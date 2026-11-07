@@ -106,7 +106,7 @@ These heuristics were tuned against a real library of DLsite-style downloads. `S
   - Segment-aware operations:
     - `skipBy` crosses into neighbouring tracks;
     - `seekGlobal` seeks on the whole-work timeline, using durations from `DurationRepository`;
-    - `switchVersion` keeps the current track and position, matching tracks by key, then core name, then index.
+    - `switchVersion` keeps the current track and position when the target has the same recording (SE on/off, WAV/MP3, filled tracks). Candidates come from the key, the core name and the index, and need durations within 3% (or 5 s), or a core-name match while durations are unknown. Otherwise the target resumes where it was last left (`Progress.versions`).
   - It saves progress every 5 s and on pause or track change. Resuming rewinds a few seconds after a long pause. Durations the player reports are recorded back into `DurationRepository`.
   - Artwork is put into `MediaMetadata` as **bytes**, because System UI cannot read `file://` URIs in the app's private cache.
 - **`PlaybackService`** is a `MediaSessionService` that wraps the engine's player. It provides:
@@ -123,7 +123,7 @@ These heuristics were tuned against a real library of DLsite-style downloads. `S
 |---|---|---|
 | `SettingsRepository` | DataStore Preferences | Read synchronously once at start-up so the first frame uses the right theme. Cover overrides are stored as JSON. |
 | `LibraryRepository` | `library.json` | Rescanned on every launch in the background, while the previous index stays visible. |
-| `ProgressRepository` | `progress.json` | Per-entry version, track index, position, fraction and a finished flag. Saved with a debounce. |
+| `ProgressRepository` | `progress.json` | Per-entry version, track index, position, fraction and a finished flag, plus the last spot in each version. Saved with a debounce. |
 | `DurationRepository` | `durations.json` | Track durations keyed by `Ref.cacheKey`. Probed when a work is opened, and updated by the player. |
 | `CoverCache` | `cacheDir/covers/*.jpg` | Downscaled JPEGs, served to Coil 3 by `CoverFetcher` and `CoverKeyer` for the `Cover` model. |
 

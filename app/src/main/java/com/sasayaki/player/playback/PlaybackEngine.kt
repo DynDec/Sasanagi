@@ -22,6 +22,7 @@ import com.sasayaki.player.data.DurationRepository
 import com.sasayaki.player.data.Entry
 import com.sasayaki.player.data.LibraryRepository
 import com.sasayaki.player.data.Progress
+import com.sasayaki.player.data.Spot
 import com.sasayaki.player.data.ProgressRepository
 import com.sasayaki.player.data.SettingsRepository
 import com.sasayaki.player.data.Track
@@ -40,6 +41,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.Dispatchers
+import kotlin.math.abs
+import kotlin.math.max
 
 data class SleepTimer(val endsAt: Long? = null, val endOfTrack: Boolean = false)
 
@@ -202,22 +205,38 @@ class PlaybackEngine(
     }
 
     /**
-     * Switches to another version of the same work, keeping the current track and position
-     * (matched by track number, then by name, then by index).
+     * Switches to another version of the same work. If the current track has a copy of the same
+     * recording there (SE on/off, WAV/MP3, a filled track), playback continues from the same
+     * position. Otherwise the target version resumes where it was last left.
      */
     fun switchVersion(target: Version) {
         val s = _state.value
         val entry = s.entry ?: return
         val cur = s.version ?: return play(entry, target)
-        val track = cur.tracks.getOrNull(player.currentMediaItemIndex)
-        val pos = player.currentPosition
-        val idx = track?.let { t ->
-            t.key?.let { k -> target.tracks.indexOfFirst { it.key == k }.takeIf { it >= 0 } }
-                ?: target.tracks.indexOfFirst { t.core.isNotEmpty() && Naming.similarCore(it.core, t.core) }.takeIf { it >= 0 }
-                ?: player.currentMediaItemIndex.takeIf { cur.tracks.size == target.tracks.size }
+        saveProgress()
+        val start = player.playWhenReady
+        val idx = sameRecording(cur, player.currentMediaItemIndex, target)
+        if (idx != null) return play(entry, target, idx, player.currentPosition, start)
+        val spot = progress[entry.id]?.versions?.get(target.id)
+        play(entry, target, spot?.index?.coerceIn(0, target.tracks.lastIndex) ?: 0, spot?.positionMs ?: 0, start)
+    }
+
+    /**
+     * The track of [target] that is the same recording as track [i] of [cur], or null. Candidates
+     * come from the track number, name and index. Track numbers and indexes also line up between
+     * unrelated versions (another narrator, a whole-work file), so a candidate needs matching
+     * durations, or a matching name while durations are unknown.
+     */
+    private fun sameRecording(cur: Version, i: Int, target: Version): Int? {
+        val t = cur.tracks.getOrNull(i) ?: return null
+        val byCore = target.tracks.indexOfFirst { t.core.isNotEmpty() && Naming.similarCore(it.core, t.core) }.takeIf { it >= 0 }
+        val byKey = t.key?.let { k -> target.tracks.indexOfFirst { it.key == k }.takeIf { it >= 0 } }
+        val byIndex = i.takeIf { cur.tracks.size == target.tracks.size }
+        val d = durations[t.ref]
+        return listOfNotNull(byKey, byCore, byIndex).distinct().firstOrNull { j ->
+            val dj = durations[target.tracks[j].ref]
+            if (d != null && dj != null) abs(d - dj) <= max(5_000L, d * 3 / 100) else j == byCore
         }
-        if (idx == null) play(entry, target, 0, 0, start = player.playWhenReady)
-        else play(entry, target, idx, pos, start = player.playWhenReady)
     }
 
     private fun mediaItem(entry: Entry, version: Version, i: Int, t: Track, art: ByteArray?): MediaItem {
@@ -416,6 +435,7 @@ class PlaybackEngine(
             Progress(
                 entryId = entry.id, versionId = v.id, index = idx, positionMs = pos,
                 updatedAt = System.currentTimeMillis(), fraction = fraction(v, idx, pos),
+                versions = spots(entry) + (v.id to Spot(idx, pos)),
             )
         )
     }
@@ -424,8 +444,15 @@ class PlaybackEngine(
         val s = _state.value
         val entry = s.entry ?: return
         val v = s.version ?: return
-        progress.put(Progress(entry.id, v.id, 0, 0, System.currentTimeMillis(), 1f, finished = true))
+        progress.put(
+            Progress(
+                entry.id, v.id, 0, 0, System.currentTimeMillis(), 1f, finished = true,
+                versions = spots(entry) + (v.id to Spot(0, 0)),
+            )
+        )
     }
+
+    private fun spots(entry: Entry) = progress[entry.id]?.versions.orEmpty()
 
     private fun fraction(v: Version, idx: Int, pos: Long): Float {
         val d = trackDurations(v)
