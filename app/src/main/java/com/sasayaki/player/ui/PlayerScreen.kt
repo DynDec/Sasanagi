@@ -195,10 +195,11 @@ fun PlayerScreen(graph: AppGraph, onCollapse: () -> Unit, onOpenEntry: () -> Uni
                     Spacer(Modifier.width(6.dp))
                     Text(formatSpeed(s.speed))
                 }
-                TextButton(onClick = { sheet = Sheet.BOOST }) {
-                    Icon(Icons.AutoMirrored.Rounded.VolumeUp, null, Modifier.size(20.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text(formatBoost(s.boostDb))
+                IconButton(onClick = { sheet = Sheet.BOOST }) {
+                    Icon(
+                        Icons.AutoMirrored.Rounded.VolumeUp, "Volume boost",
+                        tint = if (s.boostDb > 0f) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
                 SleepButton(s, onClick = { sheet = Sheet.SLEEP })
                 IconButton(onClick = { engine.cycleRepeat() }) {
@@ -422,7 +423,7 @@ private fun SpeedSheet(speed: Float, onSpeed: (Float) -> Unit) {
 private fun BoostSheet(db: Float, onBoost: (Float) -> Unit) {
     Column(Modifier.padding(horizontal = 24.dp).padding(bottom = 32.dp)) {
         Text("Volume boost", style = MaterialTheme.typography.titleMedium)
-        Text(String.format(Locale.US, "+%.1f dB", db), style = MaterialTheme.typography.displaySmall, modifier = Modifier.padding(vertical = 8.dp))
+        Text(formatBoost(db), style = MaterialTheme.typography.displaySmall, modifier = Modifier.padding(vertical = 8.dp))
         Slider(value = db, onValueChange = { onBoost((it * 2).roundToInt() / 2f) }, valueRange = 0f..MAX_BOOST_DB, steps = (MAX_BOOST_DB * 2).toInt() - 1)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             listOf(0f, 3f, 6f, 9f).forEach { v ->
@@ -432,7 +433,7 @@ private fun BoostSheet(db: Float, onBoost: (Float) -> Unit) {
     }
 }
 
-private fun formatBoost(db: Float): String = if (db <= 0f) "Boost" else String.format(Locale.US, "+%.1f dB", db)
+private fun formatBoost(db: Float): String = String.format(Locale.US, "+%.1f dB", db)
 
 @Composable
 private fun SleepSheet(s: EngineState, onMinutes: (Int) -> Unit, onEndOfTrack: () -> Unit, onCancel: () -> Unit) {
