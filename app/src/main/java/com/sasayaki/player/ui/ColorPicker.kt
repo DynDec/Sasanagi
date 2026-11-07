@@ -9,12 +9,12 @@ import androidx.compose.foundation.gestures.drag
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -58,12 +58,16 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.sasayaki.player.ui.theme.withSecondary
 
+// Ordered around the hue wheel, one full grid of PRESET_COLUMNS × 4.
 private val PRESETS = listOf(
-    "Red" to 0xFFE53935, "Pink" to 0xFFD81B60, "Rose" to 0xFFE57399, "Purple" to 0xFF8E24AA,
-    "Lavender" to 0xFF9C89C9, "Indigo" to 0xFF3949AB, "Blue" to 0xFF1E88E5, "Cyan" to 0xFF00ACC1,
-    "Teal" to 0xFF00897B, "Green" to 0xFF43A047, "Lime" to 0xFFC0CA33, "Amber" to 0xFFFFB300,
-    "Orange" to 0xFFFB8C00, "Brown" to 0xFF795548, "Slate" to 0xFF607D8B,
+    "Red" to 0xFFE53935, "Coral" to 0xFFFF7043, "Orange" to 0xFFFB8C00, "Amber" to 0xFFFFB300, "Yellow" to 0xFFFDD835,
+    "Lime" to 0xFFC0CA33, "Green" to 0xFF43A047, "Mint" to 0xFF4DB6AC, "Teal" to 0xFF00897B, "Cyan" to 0xFF00ACC1,
+    "Sky" to 0xFF4FC3F7, "Blue" to 0xFF1E88E5, "Indigo" to 0xFF3949AB, "Lavender" to 0xFF9C89C9, "Purple" to 0xFF8E24AA,
+    "Pink" to 0xFFD81B60, "Rose" to 0xFFE57399, "Brown" to 0xFF795548, "Slate" to 0xFF607D8B, "Grey" to 0xFF9E9E9E,
 ).map { (name, c) -> name to c.toInt() }
+
+private const val PRESET_COLUMNS = 5
+private val PRESET_GAP = 12.dp
 
 private val HUES = listOf(Color.Red, Color.Yellow, Color.Green, Color.Cyan, Color.Blue, Color.Magenta, Color.Red)
 
@@ -112,15 +116,20 @@ fun SecondaryColorDialog(current: Int?, dark: Boolean, onApply: (Int?) -> Unit, 
                             ) { Text(t.label, maxLines = 1) }
                         }
                     }
-                    Box(Modifier.fillMaxWidth().height(208.dp)) {
-                        when (tab) {
-                            PickerTab.PRESETS -> Presets(color, ::setExact)
-                            PickerTab.SPECTRUM -> Spectrum(
-                                hue, sat, value, color,
-                                onSv = { s, v -> sat = s; value = v; exact = null },
-                                onHue = { h -> hue = h; exact = null },
-                            )
-                            PickerTab.HEX -> HexInput(color, ::setExact)
+                    // Every tab gets the height of the full preset grid, so the dialog doesn't resize on switching.
+                    BoxWithConstraints(Modifier.fillMaxWidth()) {
+                        val rows = (PRESETS.size + PRESET_COLUMNS - 1) / PRESET_COLUMNS
+                        val cell = (maxWidth - PRESET_GAP * (PRESET_COLUMNS - 1)) / PRESET_COLUMNS
+                        Box(Modifier.fillMaxWidth().height(cell * rows + PRESET_GAP * (rows - 1))) {
+                            when (tab) {
+                                PickerTab.PRESETS -> Presets(color, ::setExact)
+                                PickerTab.SPECTRUM -> Spectrum(
+                                    hue, sat, value, color,
+                                    onSv = { s, v -> sat = s; value = v; exact = null },
+                                    onHue = { h -> hue = h; exact = null },
+                                )
+                                PickerTab.HEX -> HexInput(color, ::setExact)
+                            }
                         }
                     }
                 }
@@ -136,19 +145,22 @@ fun SecondaryColorDialog(current: Int?, dark: Boolean, onApply: (Int?) -> Unit, 
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun Presets(color: Int, onColor: (Int) -> Unit) {
-    FlowRow(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        PRESETS.forEach { (name, c) ->
-            val selected = c == color
-            Box(
-                Modifier.size(40.dp).clip(CircleShape).background(Color(c))
-                    .selectable(selected = selected, role = Role.RadioButton) { onColor(c) }
-                    .semantics { contentDescription = name },
-                contentAlignment = Alignment.Center,
-            ) {
-                if (selected) Icon(Icons.Rounded.Check, null, tint = if (Color(c).luminance() > 0.5f) Color.Black else Color.White)
+    Column(verticalArrangement = Arrangement.spacedBy(PRESET_GAP)) {
+        PRESETS.chunked(PRESET_COLUMNS).forEach { row ->
+            Row(horizontalArrangement = Arrangement.spacedBy(PRESET_GAP)) {
+                row.forEach { (name, c) ->
+                    val selected = c == color
+                    Box(
+                        Modifier.weight(1f).aspectRatio(1f).clip(CircleShape).background(Color(c))
+                            .selectable(selected = selected, role = Role.RadioButton) { onColor(c) }
+                            .semantics { contentDescription = name },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        if (selected) Icon(Icons.Rounded.Check, null, tint = if (Color(c).luminance() > 0.5f) Color.Black else Color.White)
+                    }
+                }
             }
         }
     }
@@ -162,9 +174,9 @@ private fun Spectrum(
     val sv by rememberUpdatedState(onSv)
     val h by rememberUpdatedState(onHue)
     val hueColor = Color(AndroidColor.HSVToColor(floatArrayOf(hue, 1f, 1f)))
-    Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
+    Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(20.dp)) {
         Canvas(
-            Modifier.fillMaxWidth().height(160.dp).clip(RoundedCornerShape(12.dp))
+            Modifier.fillMaxWidth().weight(1f).clip(RoundedCornerShape(12.dp))
                 .dragInput { p, size -> sv(fraction(p.x, size.width), 1f - fraction(p.y, size.height)) },
         ) {
             drawRect(Brush.horizontalGradient(listOf(Color.White, hueColor)))
