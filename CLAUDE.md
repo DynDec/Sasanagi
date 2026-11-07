@@ -27,44 +27,7 @@ Device testing uses the user's physical phone over adb, not an emulator. On Git 
 
 ## Architecture
 
-**Data flow.** `LibraryScanner` produces a list of `Entry` objects (a work), each holding `Version`s that hold `Track`s. The list is saved to `filesDir/library.json`. The UI shows it, and `PlaybackEngine` turns one `Version` into an ExoPlayer playlist.
-
-**`Ref` is the universal file handle** (`data/Models.kt`). It is either a plain path, or a ZIP path plus an entry name with cached local-header offset, compression method and sizes. All reading goes through `Ref`, so ZIP and folder content behave the same:
-- `Vfs.openStream` and `Vfs.openReader` read the bytes.
-- `RefUris` and `ArchiveDataSource` handle playback; ZIP entries use `szip://` URIs, plain files use `file://`.
-- `RefProvider` (a ContentProvider) shares files with other apps. ZIP entries are served through `StorageManager.openProxyFileDescriptor`, so the viewer reads straight from the archive.
-- `Ref.cacheKey` keys the duration cache and the thumbnails.
-
-**`data/vfs/`** builds a `VNode` tree over a folder or a ZIP. Archives found inside a work's folder are mounted as directories. `ZipIndex` is a custom central-directory parser, not `java.util.zip`, for these reasons:
-- it handles ZIP64, the UTF-8 flag, the 0x7075 unicode-path field, and a fallback to Shift-JIS/windows-31j for names;
-- `ZipEntryReader` gives random access to stored entries;
-- deflated entries are read with a forward-only Inflater that restarts on backward seeks.
-
-**`data/scan/`** holds the heuristics. They were tuned against the real sample library, so check the dump after any change.
-- `LibraryScanner` walks the library roots and decides whether each folder is a category or a work (`isEntryFolder`). It merges a folder and a ZIP of the same work (matched by title or RJ code), preferring the folder copy.
-- `EntryAnalyzer`:
-  - groups audio files into versions;
-  - splits a single folder into variants only when every tag/format group lines up with another;
-  - completes partial variants (e.g. a 効果音なし folder with only 2 tracks) with tracks from the main version, marked `fromBase` / `baseLabel`;
-  - computes version labels and sort order (本編 first, おまけ/特典 last);
-  - matches subtitle files (LRC/VTT/SRT) to tracks.
-- `Naming` has the string logic: NFKC normalization, natural sort with full-width digits, removing leading track numbers, track keys, parsing variant tags, RJ codes.
-- `CoverPicker` scores image filenames to prefer the plain (logo-free) illustration: ロゴなし, イラストのみ and 壁紙 score up; アイコン, スマホ and small files score down.
-
-**Playback.** `PlaybackEngine` (a singleton in `AppGraph`, used on the main thread) owns the one ExoPlayer, which `PlaybackService` (a `MediaSessionService`) wraps in a MediaSession. The UI calls the engine directly. `MainActivity` binds a `MediaController` only to keep the service alive. The engine:
-- exposes `EngineState` as a StateFlow;
-- handles skipping across segment boundaries, seeking on the whole-work timeline, and switching versions while keeping the position (matched by track key, then core name, then index);
-- runs the sleep timer, saves progress every 5 s, and records durations reported by the player;
-- serves media resumption through `resumptionItems()`.
-
-Artwork goes into MediaMetadata as **bytes**, not a file URI, because System UI can't read the app's private cache.
-
-**State and persistence** (`AppGraph` in `SasayakiApp.kt`):
-- `SettingsRepository`: DataStore.
-- `LibraryRepository`, `ProgressRepository` (per-entry resume position) and `DurationRepository`: JSON files written by `JsonStore` (atomic save, debounced).
-- `CoverCache` makes downscaled JPEGs, served to Coil by `CoverFetcher` and `CoverKeyer` for the `Cover` model.
-
-**UI** (`ui/`). There is no navigation library. `MainActivity` keeps a stack of `Route` objects, with the full-screen player and the folder picker as overlays on top. Screens read the repository StateFlows directly, and the theme is dark by default.
+See [ARCHITECTURE.md](ARCHITECTURE.md) for the data model, the `Ref` file handle, ZIP and VFS internals, the scanning heuristics, playback, persistence and UI structure. Read it before changing scanning or file access, and keep it up to date when the architecture changes.
 
 ## UI writing
 
@@ -74,3 +37,7 @@ Assume the user knows common UI and design patterns. Don't add labels, captions 
 
 - Do not run Kotlin source containing regex backslashes through Python or shell heredoc string replacement. It silently turns `\\` into `\` and breaks the regexes in `Naming.kt` and `CoverPicker.kt`. Use the Edit tool for those files.
 - MP3s in the sample library are CBR without Xing/LAME headers. The extractor has constant-bitrate seeking enabled. Seamless segment transitions depend on ExoPlayer loading the next playlist item in advance; there is no encoder-delay metadata to trim.
+
+## Committing
+
+After finishing and passing the necessary checks, commit the task's changes unless the user asks not to or to leave them uncommitted. Use Conventional Commits, with a closing keyword when implementing or fixing a GitHub issue.
