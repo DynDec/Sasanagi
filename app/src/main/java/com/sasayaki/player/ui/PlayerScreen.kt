@@ -55,6 +55,7 @@ import androidx.compose.material3.AssistChip
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledIconButton
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -425,9 +426,12 @@ private fun BoostSheet(db: Float, onBoost: (Float) -> Unit) {
         Text("Volume boost", style = MaterialTheme.typography.titleMedium)
         Text(formatBoost(db), style = MaterialTheme.typography.displaySmall, modifier = Modifier.padding(vertical = 8.dp))
         Slider(value = db, onValueChange = { onBoost((it * 2).roundToInt() / 2f) }, valueRange = 0f..MAX_BOOST_DB, steps = (MAX_BOOST_DB * 2).toInt() - 1)
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             listOf(0f, 3f, 6f, 9f).forEach { v ->
-                FilterChip(selected = db == v, onClick = { onBoost(v) }, label = { Text(formatBoost(v)) })
+                // Buttons rather than chips: chip padding leaves too little room for "+9.0 dB" in four columns.
+                val label = @Composable { Text(formatBoost(v), maxLines = 1, softWrap = false) }
+                if (db == v) FilledTonalButton(onClick = { onBoost(v) }, Modifier.weight(1f), contentPadding = PaddingValues(4.dp)) { label() }
+                else OutlinedButton(onClick = { onBoost(v) }, Modifier.weight(1f), contentPadding = PaddingValues(4.dp)) { label() }
             }
         }
     }
