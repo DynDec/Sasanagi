@@ -90,7 +90,7 @@ class MainActivity : ComponentActivity() {
                     navigationBarStyle = if (dark) SystemBarStyle.dark(transparent) else SystemBarStyle.light(transparent, transparent),
                 )
             }
-            SasayakiTheme(settings.theme, settings.dynamicColor) {
+            SasayakiTheme(settings.theme, settings.dynamicColor, settings.secondaryColor) {
                 Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
                     var granted by remember { mutableStateOf(hasStorageAccess()) }
                     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { granted = hasStorageAccess() }

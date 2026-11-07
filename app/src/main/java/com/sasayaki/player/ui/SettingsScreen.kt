@@ -2,6 +2,15 @@ package com.sasayaki.player.ui
 
 import android.os.Build
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.draw.clip
+import com.sasayaki.player.ui.theme.isDark
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -109,6 +118,23 @@ fun SettingsScreen(graph: AppGraph, bottomPadding: androidx.compose.ui.unit.Dp, 
             }
             if (Build.VERSION.SDK_INT >= 31) item {
                 SwitchRow("Dynamic color", "Use colors from your wallpaper", settings.dynamicColor) { v -> update { it.copy(dynamicColor = v) } }
+            }
+            item {
+                var picking by remember { mutableStateOf(false) }
+                ListItem(
+                    modifier = Modifier.clickable { picking = true },
+                    headlineContent = { Text("Secondary color") },
+                    supportingContent = { Text(settings.secondaryColor?.let { "#" + hexOf(it) } ?: "Default") },
+                    trailingContent = { Box(Modifier.size(32.dp).clip(CircleShape).background(MaterialTheme.colorScheme.secondary)) },
+                )
+                if (picking) {
+                    SecondaryColorDialog(
+                        current = settings.secondaryColor,
+                        dark = isDark(settings.theme),
+                        onApply = { c -> picking = false; update { it.copy(secondaryColor = c) } },
+                        onDismiss = { picking = false },
+                    )
+                }
             }
 
             item { SectionTitle("Playback") }

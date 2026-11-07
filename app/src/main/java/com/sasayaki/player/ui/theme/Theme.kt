@@ -2,12 +2,14 @@ package com.sasayaki.player.ui.theme
 
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import com.sasayaki.player.data.ThemeMode
@@ -78,14 +80,26 @@ fun isDark(mode: ThemeMode): Boolean = when (mode) {
     ThemeMode.SYSTEM -> isSystemInDarkTheme()
 }
 
+/** Replaces the secondary roles with tones of [argb], using Material's tone assignments. */
+fun ColorScheme.withSecondary(argb: Int?, dark: Boolean): ColorScheme {
+    if (argb == null) return this
+    fun t(tone: Double) = Color(Tones.tone(argb, tone))
+    return if (dark) {
+        copy(secondary = t(80.0), onSecondary = t(20.0), secondaryContainer = t(30.0), onSecondaryContainer = t(90.0))
+    } else {
+        copy(secondary = t(40.0), onSecondary = t(100.0), secondaryContainer = t(90.0), onSecondaryContainer = t(10.0))
+    }
+}
+
 @Composable
-fun SasayakiTheme(mode: ThemeMode, dynamic: Boolean, content: @Composable () -> Unit) {
+fun SasayakiTheme(mode: ThemeMode, dynamic: Boolean, secondary: Int?, content: @Composable () -> Unit) {
     val dark = isDark(mode)
     val ctx = LocalContext.current
-    val scheme = when {
+    val base = when {
         dynamic && Build.VERSION.SDK_INT >= 31 -> if (dark) dynamicDarkColorScheme(ctx) else dynamicLightColorScheme(ctx)
         dark -> Dark
         else -> Light
     }
+    val scheme = remember(base, secondary, dark) { base.withSecondary(secondary, dark) }
     MaterialTheme(colorScheme = scheme, content = content)
 }
