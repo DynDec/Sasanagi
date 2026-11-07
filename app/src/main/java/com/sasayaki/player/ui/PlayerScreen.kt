@@ -28,6 +28,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.QueueMusic
+import androidx.compose.material.icons.automirrored.rounded.VolumeUp
 import androidx.compose.material.icons.rounded.Bedtime
 import androidx.compose.material.icons.rounded.BedtimeOff
 import androidx.compose.material.icons.rounded.ClosedCaption
@@ -96,12 +97,14 @@ import com.sasayaki.player.data.Cue
 import com.sasayaki.player.data.Subtitles
 import com.sasayaki.player.data.Version
 import com.sasayaki.player.playback.EngineState
+import com.sasayaki.player.playback.MAX_BOOST_DB
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import java.util.Locale
+import kotlin.math.roundToInt
 
-private enum class Sheet { SEGMENTS, SPEED, SLEEP, VERSIONS }
+private enum class Sheet { SEGMENTS, SPEED, BOOST, SLEEP, VERSIONS }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -192,6 +195,11 @@ fun PlayerScreen(graph: AppGraph, onCollapse: () -> Unit, onOpenEntry: () -> Uni
                     Spacer(Modifier.width(6.dp))
                     Text(formatSpeed(s.speed))
                 }
+                TextButton(onClick = { sheet = Sheet.BOOST }) {
+                    Icon(Icons.AutoMirrored.Rounded.VolumeUp, null, Modifier.size(20.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text(formatBoost(s.boostDb))
+                }
                 SleepButton(s, onClick = { sheet = Sheet.SLEEP })
                 IconButton(onClick = { engine.cycleRepeat() }) {
                     val (icon, tint) = when (s.repeatMode) {
@@ -216,6 +224,7 @@ fun PlayerScreen(graph: AppGraph, onCollapse: () -> Unit, onOpenEntry: () -> Uni
             SegmentList(version, durations, s.index, onPick = { engine.seekToTrack(it); sheet = null })
         }
         Sheet.SPEED -> ModalBottomSheet(onDismissRequest = { sheet = null }) { SpeedSheet(s.speed) { engine.setSpeed(it) } }
+        Sheet.BOOST -> ModalBottomSheet(onDismissRequest = { sheet = null }) { BoostSheet(s.boostDb) { engine.setBoost(it) } }
         Sheet.SLEEP -> ModalBottomSheet(onDismissRequest = { sheet = null }) {
             SleepSheet(s, onMinutes = { engine.setSleepMinutes(it); sheet = null }, onEndOfTrack = { engine.setSleepEndOfTrack(); sheet = null },
                 onCancel = { engine.cancelSleep(); sheet = null })
@@ -408,6 +417,22 @@ private fun SpeedSheet(speed: Float, onSpeed: (Float) -> Unit) {
         }
     }
 }
+
+@Composable
+private fun BoostSheet(db: Float, onBoost: (Float) -> Unit) {
+    Column(Modifier.padding(horizontal = 24.dp).padding(bottom = 32.dp)) {
+        Text("Volume boost", style = MaterialTheme.typography.titleMedium)
+        Text(String.format(Locale.US, "+%.1f dB", db), style = MaterialTheme.typography.displaySmall, modifier = Modifier.padding(vertical = 8.dp))
+        Slider(value = db, onValueChange = { onBoost((it * 2).roundToInt() / 2f) }, valueRange = 0f..MAX_BOOST_DB, steps = (MAX_BOOST_DB * 2).toInt() - 1)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            listOf(0f, 3f, 6f, 9f).forEach { v ->
+                FilterChip(selected = db == v, onClick = { onBoost(v) }, label = { Text(formatBoost(v)) })
+            }
+        }
+    }
+}
+
+private fun formatBoost(db: Float): String = if (db <= 0f) "Boost" else String.format(Locale.US, "+%.1f dB", db)
 
 @Composable
 private fun SleepSheet(s: EngineState, onMinutes: (Int) -> Unit, onEndOfTrack: () -> Unit, onCancel: () -> Unit) {

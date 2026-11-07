@@ -102,7 +102,8 @@ These heuristics were tuned against a real library of DLsite-style downloads. `S
 - **`PlaybackEngine`** owns the app's single ExoPlayer. Both the UI and the media session use it, always on the main thread.
   - One version becomes one playlist, with one media item per track. ExoPlayer loads the next item in advance, so segment changes are seamless. The sample MP3s are CBR without Xing/LAME headers, so constant-bitrate seeking is enabled and there is no encoder delay to trim.
   - Audio attributes are `USAGE_MEDIA` / `CONTENT_TYPE_SPEECH` with focus handling: the player pauses on interruptions instead of lowering its volume. It also pauses when headphones are unplugged.
-  - It exposes `EngineState` (entry, version, index, play state, speed, repeat, sleep timer) as a `StateFlow`.
+  - It exposes `EngineState` (entry, version, index, play state, speed, volume boost, repeat, sleep timer) as a `StateFlow`.
+  - Volume boost (0 to +9 dB) uses a `LoudnessEnhancer` on the player's audio session, recreated when the session ID changes. It is not persisted, like speed.
   - Segment-aware operations:
     - `skipBy` crosses into neighbouring tracks;
     - `seekGlobal` seeks on the whole-work timeline, using durations from `DurationRepository`;

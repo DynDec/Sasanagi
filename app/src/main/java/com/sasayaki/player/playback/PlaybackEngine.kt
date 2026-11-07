@@ -1,6 +1,7 @@
 package com.sasayaki.player.playback
 
 import android.content.Context
+import android.media.audiofx.LoudnessEnhancer
 import androidx.annotation.OptIn
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
@@ -43,6 +44,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.Dispatchers
 import kotlin.math.abs
 import kotlin.math.max
+import kotlin.math.roundToInt
 
 data class SleepTimer(val endsAt: Long? = null, val endOfTrack: Boolean = false)
 
@@ -54,6 +56,7 @@ data class EngineState(
     val playWhenReady: Boolean = false,
     val buffering: Boolean = false,
     val speed: Float = 1f,
+    val boostDb: Float = 0f,
     val repeatMode: Int = Player.REPEAT_MODE_OFF,
     val sleep: SleepTimer? = null,
     val error: String? = null,
@@ -102,6 +105,7 @@ class PlaybackEngine(
     private var saveJob: Job? = null
     private var sleepJob: Job? = null
     private var pausedAt = 0L
+    private var enhancer: LoudnessEnhancer? = null
 
     init {
         player.addListener(object : Player.Listener {
@@ -135,6 +139,12 @@ class PlaybackEngine(
 
             override fun onPlaybackParametersChanged(playbackParameters: PlaybackParameters) {
                 _state.update { it.copy(speed = playbackParameters.speed) }
+            }
+
+            override fun onAudioSessionIdChanged(audioSessionId: Int) {
+                enhancer?.release()
+                enhancer = null
+                applyBoost()
             }
 
             override fun onRepeatModeChanged(repeatMode: Int) {
@@ -354,6 +364,27 @@ class PlaybackEngine(
         player.playbackParameters = PlaybackParameters(speed)
     }
 
+    fun setBoost(db: Float) {
+        _state.update { it.copy(boostDb = db.coerceIn(0f, MAX_BOOST_DB)) }
+        applyBoost()
+    }
+
+    /** Gain above full scale goes through [LoudnessEnhancer], which limits instead of clipping. */
+    private fun applyBoost() {
+        val db = _state.value.boostDb
+        if (db <= 0f) {
+            enhancer?.enabled = false
+            return
+        }
+        val session = player.audioSessionId
+        if (session == C.AUDIO_SESSION_ID_UNSET) return
+        val e = enhancer ?: runCatching { LoudnessEnhancer(session) }.getOrNull()?.also { enhancer = it } ?: return
+        runCatching {
+            e.setTargetGain((db * 100).roundToInt())
+            e.enabled = true
+        }
+    }
+
     fun cycleRepeat() {
         player.repeatMode = when (player.repeatMode) {
             Player.REPEAT_MODE_OFF -> Player.REPEAT_MODE_ALL
@@ -367,7 +398,7 @@ class PlaybackEngine(
         player.stop()
         player.clearMediaItems()
         cancelSleep()
-        _state.update { EngineState(speed = it.speed, repeatMode = it.repeatMode) }
+        _state.update { EngineState(speed = it.speed, boostDb = it.boostDb, repeatMode = it.repeatMode) }
     }
 
     // ---- Sleep timer ----
@@ -474,3 +505,4 @@ class PlaybackEngine(
 }
 
 private const val ART_SIZE = 720
+const val MAX_BOOST_DB = 9f
