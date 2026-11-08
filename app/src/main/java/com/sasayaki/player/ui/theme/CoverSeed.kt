@@ -32,6 +32,24 @@ object CoverSeed {
     private const val WARM_VIVID = 70.0
 
     /**
+     * Dark surfaces take up to [DARK_TINT_CHROMA]: enough to read as a hue, low enough to stay a background.
+     * Near black sRGB fits little chroma either, so they also go [DARK_TINT_LIGHTEN] L* lighter.
+     */
+    private const val DARK_TINT_CHROMA = 16.0
+    private const val DARK_TINT_LIGHTEN = 2.0
+
+    /**
+     * Light surfaces sit near white, where sRGB leaves little room for chroma and the eye notices less of it,
+     * so they go [LIGHT_TINT_DARKEN] L* darker and take up to [LIGHT_TINT_CHROMA].
+     */
+    private const val LIGHT_TINT_DARKEN = 4.0
+    private const val LIGHT_TINT_CHROMA = 18.0
+
+    /** A surface of lightness [l] (L*) tinted with the hue of [seed]. */
+    fun surface(seed: Int, l: Double, dark: Boolean): Int =
+        if (dark) Tones.tone(seed, l + DARK_TINT_LIGHTEN, DARK_TINT_CHROMA) else Tones.tone(seed, l - LIGHT_TINT_DARKEN, LIGHT_TINT_CHROMA)
+
+    /**
      * The most distinctive hue of [pixels] (ARGB), as the mean color of its pixels in that hue, or null when
      * the image is mostly gray. Pixels vote for one of [HUE_BUCKETS] Lab hues, weighted by chroma, with
      * muted warm pixels discounted by [WARM_WEIGHT].

@@ -23,7 +23,7 @@ Stack: Kotlin and Jetpack Compose (Material 3), Media3/ExoPlayer, Coil 3, kotlin
 SASAYAKI_OUT="$TEMP/scan-dump.txt" ./gradlew :app:testDebugUnitTest --tests "*ScanSampleTest*"
 ```
 
-`CoverSeedSampleTest` does the same for cover colors: it renders each sample cover next to the surface, accent and secondary colors picked from it, to `SASAYAKI_SEEDS_OUT` (default `app/build/cover-seeds.png`). Render it before and after changing `CoverSeed` and compare.
+`CoverSeedSampleTest` does the same for cover colors: it renders each sample cover next to the dark and light surface, accent and secondary colors picked from it, to `SASAYAKI_SEEDS_OUT` (default `app/build/cover-seeds.png`). Render it before and after changing `CoverSeed` and compare.
 
 Device testing uses the user's physical phone over adb, not an emulator. On Git Bash, set `MSYS_NO_PATHCONV=1` so device paths aren't rewritten. adb hangs when a directory is pushed to a destination with a Japanese name: push under an ASCII name, then rename it on the device.
 

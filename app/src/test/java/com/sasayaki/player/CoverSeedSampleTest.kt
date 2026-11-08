@@ -13,7 +13,7 @@ import java.io.File
 import javax.imageio.ImageIO
 
 /**
- * Renders a contact sheet of the sample library's covers next to the dark-theme surface, accent and
+ * Renders a contact sheet of the sample library's covers next to the dark and light surface, accent and
  * secondary colors picked from each, to judge [CoverSeed] by eye. Written to SASAYAKI_SEEDS_OUT.
  */
 class CoverSeedSampleTest {
@@ -28,7 +28,8 @@ class CoverSeedSampleTest {
             .mapNotNull { e -> e.cover?.let { ref -> runCatching { Vfs.openStream(ref).use { ImageIO.read(it) } }.getOrNull()?.let { scaled(it, 320) } } }
 
         val cols = 2
-        val cellWidth = row + 200
+        val panel = 200
+        val cellWidth = row + 2 * panel
         val sheet = BufferedImage(cellWidth * cols, row * ((covers.size + cols - 1) / cols), BufferedImage.TYPE_INT_RGB)
         val g = sheet.createGraphics()
         g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR)
@@ -37,15 +38,20 @@ class CoverSeedSampleTest {
             val y = (i / cols) * row
             val seed = CoverSeed.pick(pixelsOf(img, 80))
             g.drawImage(img, x, y, row, row, null)
-            g.color = Color(seed?.let { Tones.tone(it, 7.0, 10.0) } ?: 0x141216)
-            g.fillRect(x + row, y, 200, row)
-            g.color = Color(seed?.let { Tones.tone(it, 12.0, 10.0) } ?: 0x211E22)
-            g.fillRoundRect(x + row + 12, y + 12, 176, 96, 16, 16)
-            if (seed != null) {
-                g.color = Color(Tones.tone(seed, 80.0, minChroma = 32.0))
-                g.fillOval(x + row + 28, y + 28, 64, 64)
-                g.color = Color(Tones.tone(seed, 30.0, 24.0, 16.0))
-                g.fillRoundRect(x + row + 104, y + 52, 72, 16, 16, 16)
+            // Background and card at the default palette's surface and surfaceContainer, dark then light.
+            listOf(Triple(true, 0x141216, 0x211E22), Triple(false, 0xFFF8F9, 0xF6EAED)).forEachIndexed { p, (dark, bg, card) ->
+                val px = x + row + p * panel
+                fun surface(rgb: Int) = seed?.let { CoverSeed.surface(it, Tones.toLab(rgb)[0], dark) } ?: rgb
+                g.color = Color(surface(bg))
+                g.fillRect(px, y, panel, row)
+                g.color = Color(surface(card))
+                g.fillRoundRect(px + 12, y + 12, 176, 96, 16, 16)
+                if (seed != null) {
+                    g.color = Color(Tones.tone(seed, if (dark) 80.0 else 40.0, minChroma = 32.0))
+                    g.fillOval(px + 28, y + 28, 64, 64)
+                    g.color = Color(Tones.tone(seed, if (dark) 30.0 else 90.0, 24.0, 16.0))
+                    g.fillRoundRect(px + 104, y + 52, 72, 16, 16, 16)
+                }
             }
         }
         g.dispose()

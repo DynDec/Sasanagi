@@ -19,9 +19,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
 
-/** Lab chroma of tinted surfaces: enough to read as a hue, low enough to stay a background. */
-private const val TINT_CHROMA = 10.0
-
 /** Minimum Lab chroma of the cover accent, so muted covers still give a color that reads as one. */
 private const val ACCENT_MIN_CHROMA = 32.0
 
@@ -48,10 +45,10 @@ private fun seedOf(file: File): Int? {
     return CoverSeed.pick(px)
 }
 
-/** Moves each surface role to the hue of [argb] at low chroma, keeping its lightness so contrast is unchanged. */
-fun ColorScheme.withSurfaceTint(argb: Int?): ColorScheme {
+/** Moves each surface role to the hue of [argb] at low chroma, keeping it close to its lightness so contrast holds. */
+fun ColorScheme.withSurfaceTint(argb: Int?, dark: Boolean): ColorScheme {
     if (argb == null) return this
-    fun Color.tinted() = Color(Tones.tone(argb, Tones.toLab(toArgb())[0], TINT_CHROMA))
+    fun Color.tinted() = Color(CoverSeed.surface(argb, Tones.toLab(toArgb())[0], dark))
     return copy(
         background = background.tinted(),
         surface = surface.tinted(),
@@ -72,7 +69,7 @@ fun CoverTinted(cover: Cover?, cache: CoverCache, enabled: Boolean, content: @Co
     }
     val dark = base.surface.luminance() < 0.5f
     val target = remember(base, seed, dark) {
-        base.withSurfaceTint(seed).withAccent(seed, dark, ACCENT_MIN_CHROMA).withSecondary(seed, dark, SECONDARY_CHROMA)
+        base.withSurfaceTint(seed, dark).withAccent(seed, dark, ACCENT_MIN_CHROMA).withSecondary(seed, dark, SECONDARY_CHROMA)
     }
     val scheme = base.copy(
         primary = animated(target.primary),
