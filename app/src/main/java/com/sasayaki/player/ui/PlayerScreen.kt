@@ -32,7 +32,6 @@ import androidx.compose.material.icons.automirrored.rounded.VolumeUp
 import androidx.compose.material.icons.rounded.Bedtime
 import androidx.compose.material.icons.rounded.BedtimeOff
 import androidx.compose.material.icons.rounded.ClosedCaption
-import androidx.compose.material.icons.rounded.ClosedCaptionDisabled
 import androidx.compose.material.icons.rounded.FastForward
 import androidx.compose.material.icons.rounded.FastRewind
 import androidx.compose.material.icons.rounded.Forward10
@@ -206,26 +205,15 @@ private fun PlayerContent(graph: AppGraph, onCollapse: () -> Unit, onOpenEntry: 
                     Spacer(Modifier.width(6.dp))
                     Text(formatSpeed(s.speed))
                 }
-                IconButton(onClick = { sheet = Sheet.BOOST }) {
-                    Icon(
-                        Icons.AutoMirrored.Rounded.VolumeUp, "Volume boost",
-                        tint = if (s.boostDb > 0f) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                ToggleIconButton(s.boostDb > 0f, onClick = { sheet = Sheet.BOOST }) {
+                    Icon(Icons.AutoMirrored.Rounded.VolumeUp, "Volume boost")
                 }
                 SleepButton(s, onClick = { sheet = Sheet.SLEEP })
-                IconButton(onClick = { engine.cycleRepeat() }) {
-                    val (icon, tint) = when (s.repeatMode) {
-                        Player.REPEAT_MODE_ONE -> Icons.Rounded.RepeatOne to MaterialTheme.colorScheme.primary
-                        Player.REPEAT_MODE_ALL -> Icons.Rounded.Repeat to MaterialTheme.colorScheme.primary
-                        else -> Icons.Rounded.Repeat to MaterialTheme.colorScheme.onSurfaceVariant
-                    }
-                    Icon(icon, "Repeat", tint = tint)
+                ToggleIconButton(s.repeatMode != Player.REPEAT_MODE_OFF, onClick = { engine.cycleRepeat() }) {
+                    Icon(if (s.repeatMode == Player.REPEAT_MODE_ONE) Icons.Rounded.RepeatOne else Icons.Rounded.Repeat, "Repeat")
                 }
-                IconButton(onClick = { showSubs = !showSubs }, enabled = cues.isNotEmpty()) {
-                    Icon(
-                        if (showSubs) Icons.Rounded.ClosedCaption else Icons.Rounded.ClosedCaptionDisabled, "Subtitles",
-                        tint = if (showSubs && cues.isNotEmpty()) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = if (cues.isEmpty()) 0.38f else 1f),
-                    )
+                ToggleIconButton(showSubs && cues.isNotEmpty(), onClick = { showSubs = !showSubs }, enabled = cues.isNotEmpty()) {
+                    Icon(Icons.Rounded.ClosedCaption, "Subtitles")
                 }
             }
         }
@@ -370,6 +358,22 @@ private fun forwardIcon(sec: Int): ImageVector = when (sec) {
     10 -> Icons.Rounded.Forward10
     30 -> Icons.Rounded.Forward30
     else -> Icons.Rounded.FastForward
+}
+
+/** An accent icon button that sits on a filled container while [active]. */
+@Composable
+private fun ToggleIconButton(active: Boolean, onClick: () -> Unit, enabled: Boolean = true, content: @Composable () -> Unit) {
+    val colors = MaterialTheme.colorScheme
+    if (active) {
+        FilledIconButton(
+            onClick = onClick,
+            enabled = enabled,
+            colors = IconButtonDefaults.filledIconButtonColors(containerColor = colors.primaryContainer, contentColor = colors.onPrimaryContainer),
+            content = content,
+        )
+    } else {
+        IconButton(onClick = onClick, enabled = enabled, colors = IconButtonDefaults.iconButtonColors(contentColor = colors.primary), content = content)
+    }
 }
 
 @Composable
