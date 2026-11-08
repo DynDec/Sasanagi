@@ -48,7 +48,9 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -80,7 +82,8 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val graph = (application as SasayakiApp).graph
-        if (intent?.getBooleanExtra(EXTRA_OPEN_PLAYER, false) == true) openPlayer.value = true
+        openPlayer.value = savedInstanceState?.getBoolean(KEY_PLAYER_OPEN)
+            ?: (intent?.getBooleanExtra(EXTRA_OPEN_PLAYER, false) == true)
         setContent {
             val settings by graph.settings.settings.collectAsStateWithLifecycle()
             val dark = isDark(settings.theme)
@@ -99,6 +102,11 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putBoolean(KEY_PLAYER_OPEN, openPlayer.value)
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -155,6 +163,7 @@ class MainActivity : ComponentActivity() {
 
     companion object {
         const val EXTRA_OPEN_PLAYER = "open_player"
+        private const val KEY_PLAYER_OPEN = "player_open"
     }
 }
 
@@ -164,9 +173,27 @@ private sealed interface Route {
     data object Settings : Route
 }
 
+private fun Route.encode(): String = when (this) {
+    Route.Library -> "library"
+    Route.Settings -> "settings"
+    is Route.Entry -> "entry:$id"
+}
+
+private fun decodeRoute(s: String): Route = when {
+    s == "settings" -> Route.Settings
+    s.startsWith("entry:") -> Route.Entry(s.removePrefix("entry:"))
+    else -> Route.Library
+}
+
+// Survives configuration changes (rotation) and process death, unlike a plain remembered list.
+private val RouteStackSaver = listSaver<SnapshotStateList<Route>, String>(
+    save = { stack -> stack.map { it.encode() } },
+    restore = { saved -> mutableStateListOf<Route>().apply { addAll(saved.map(::decodeRoute)) } },
+)
+
 @Composable
 private fun App(graph: AppGraph, openPlayer: androidx.compose.runtime.MutableState<Boolean>) {
-    val stack = remember { mutableStateListOf<Route>(Route.Library) }
+    val stack = rememberSaveable(saver = RouteStackSaver) { mutableStateListOf<Route>(Route.Library) }
     var picker by rememberSaveable { mutableStateOf(false) }
     val engineState by graph.engine.state.collectAsStateWithLifecycle()
     val library by graph.library.library.collectAsStateWithLifecycle()
@@ -213,7 +240,8 @@ private fun App(graph: AppGraph, openPlayer: androidx.compose.runtime.MutableSta
                     )
                     is Route.Entry -> {
                         val entry = remember(library, route.id) { graph.library.entry(route.id) }
-                        if (entry == null) LaunchedEffect(Unit) { pop() }
+                        // After process death the stack is restored before the index has loaded.
+                        if (entry == null) { if (loaded) LaunchedEffect(Unit) { pop() } }
                         else EntryScreen(graph, entry, bottomPadding, onBack = { pop() }, onOpenPlayer = { openPlayer.value = true })
                     }
                     Route.Settings -> SettingsScreen(graph, bottomPadding, onBack = { pop() }, onAddFolder = { picker = true })
