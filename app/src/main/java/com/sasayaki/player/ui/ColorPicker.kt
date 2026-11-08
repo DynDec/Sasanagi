@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -22,7 +23,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -33,7 +33,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -57,6 +59,7 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import com.sasayaki.player.ui.theme.LocalBaseColorScheme
 import com.sasayaki.player.ui.theme.withAccent
 import com.sasayaki.player.ui.theme.withSecondary
 
@@ -79,49 +82,87 @@ fun hexOf(argb: Int): String = "%06X".format(argb and 0xFFFFFF)
 
 private fun hsvOf(argb: Int) = FloatArray(3).also { AndroidColor.colorToHSV(argb, it) }
 
-/** Which color role a [ColorDialog] picks. */
-enum class ColorRole(val title: String) { ACCENT("Accent color"), SECONDARY("Secondary color") }
-
-fun ColorScheme.colorOf(role: ColorRole): Color = when (role) {
-    ColorRole.ACCENT -> primary
-    ColorRole.SECONDARY -> secondary
-}
-
-private fun ColorScheme.with(role: ColorRole, argb: Int, dark: Boolean): ColorScheme = when (role) {
-    ColorRole.ACCENT -> withAccent(argb, dark)
-    ColorRole.SECONDARY -> withSecondary(argb, dark)
-}
+private enum class ColorRole(val label: String) { ACCENT("Accent"), SECONDARY("Secondary") }
 
 /**
- * Picks the color for [role]. The dialog is themed with the color being picked, so its own
- * controls preview it. [onApply] gets null for the default palette.
+ * Picker state for one color role, starting at [initial], or at [fallback] (the palette's own color)
+ * when that is null. [picked] stays null until the color is changed, so an untouched role keeps
+ * following the palette, including dynamic color.
  */
-@Composable
-fun ColorDialog(role: ColorRole, current: Int?, dark: Boolean, onApply: (Int?) -> Unit, onDismiss: () -> Unit) {
-    val start = current ?: MaterialTheme.colorScheme.colorOf(role).toArgb()
-    var tab by remember { mutableStateOf(PickerTab.PRESETS) }
+private class RolePick(initial: Int?, private val fallback: Int) {
     // HSV drives the spectrum; presets and hex input also set an exact color, which HSV can't round-trip.
-    val hsv = remember { hsvOf(start) }
-    var hue by remember { mutableFloatStateOf(hsv[0]) }
-    var sat by remember { mutableFloatStateOf(hsv[1]) }
-    var value by remember { mutableFloatStateOf(hsv[2]) }
-    var exact by remember { mutableStateOf<Int?>(start) }
-    val color = exact ?: AndroidColor.HSVToColor(floatArrayOf(hue, sat, value))
+    var hue by mutableFloatStateOf(0f)
+        private set
+    var sat by mutableFloatStateOf(0f)
+        private set
+    var value by mutableFloatStateOf(0f)
+        private set
+    private var exact by mutableStateOf<Int?>(null)
+    private var isDefault by mutableStateOf(initial == null)
 
-    fun setExact(argb: Int) {
+    /** Bumped on reset, so inputs holding their own text start over. */
+    var resets by mutableIntStateOf(0)
+        private set
+
+    init { setExact(initial ?: fallback, edit = false) }
+
+    val color: Int get() = exact ?: AndroidColor.HSVToColor(floatArrayOf(hue, sat, value))
+    val picked: Int? get() = if (isDefault) null else color
+
+    fun setExact(argb: Int, edit: Boolean = true) {
         val h = hsvOf(argb)
         if (h[1] > 0f && h[2] > 0f) hue = h[0] // keep the hue for grays and black
         sat = h[1]
         value = h[2]
         exact = argb
+        if (edit) isDefault = false
     }
 
-    MaterialTheme(colorScheme = MaterialTheme.colorScheme.with(role, color, dark)) {
+    fun dragSv(s: Float, v: Float) { sat = s; value = v; exact = null; isDefault = false }
+    fun dragHue(h: Float) { hue = h; exact = null; isDefault = false }
+
+    fun reset() {
+        setExact(fallback, edit = false)
+        isDefault = true
+        resets++
+    }
+}
+
+/**
+ * Picks the accent and secondary colors, one at a time. The dialog is themed with the colors being
+ * picked, so its own controls preview them. [onApply] gets null for a role left at the palette's color.
+ */
+@Composable
+fun ColorsDialog(accent: Int?, secondary: Int?, dark: Boolean, onApply: (accent: Int?, secondary: Int?) -> Unit, onDismiss: () -> Unit) {
+    val base = LocalBaseColorScheme.current
+    val picks = remember {
+        mapOf(
+            ColorRole.ACCENT to RolePick(accent, base.primary.toArgb()),
+            ColorRole.SECONDARY to RolePick(secondary, base.secondary.toArgb()),
+        )
+    }
+    var role by remember { mutableStateOf(ColorRole.ACCENT) }
+    var tab by remember { mutableStateOf(PickerTab.PRESETS) }
+    val pick = picks.getValue(role)
+    val color = pick.color
+
+    val preview = base.withAccent(picks.getValue(ColorRole.ACCENT).picked, dark)
+        .withSecondary(picks.getValue(ColorRole.SECONDARY).picked, dark)
+    MaterialTheme(colorScheme = preview) {
         AlertDialog(
             onDismissRequest = onDismiss,
-            title = { Text(role.title) },
+            title = { Text("Colors") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+                        ColorRole.entries.forEachIndexed { i, r ->
+                            SegmentedButton(
+                                selected = role == r, onClick = { role = r },
+                                shape = SegmentedButtonDefaults.itemShape(i, ColorRole.entries.size),
+                                icon = { Box(Modifier.requiredSize(18.dp).clip(CircleShape).background(Color(picks.getValue(r).color))) },
+                            ) { Text(r.label, maxLines = 1) }
+                        }
+                    }
                     SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
                         PickerTab.entries.forEachIndexed { i, t ->
                             SegmentedButton(
@@ -136,23 +177,25 @@ fun ColorDialog(role: ColorRole, current: Int?, dark: Boolean, onApply: (Int?) -
                         val rows = (PRESETS.size + PRESET_COLUMNS - 1) / PRESET_COLUMNS
                         val cell = (maxWidth - PRESET_GAP * (PRESET_COLUMNS - 1)) / PRESET_COLUMNS
                         Box(Modifier.fillMaxWidth().height(cell * rows + PRESET_GAP * (rows - 1))) {
-                            when (tab) {
-                                PickerTab.PRESETS -> Presets(color, ::setExact)
-                                PickerTab.SPECTRUM -> Spectrum(
-                                    hue, sat, value, color,
-                                    onSv = { s, v -> sat = s; value = v; exact = null },
-                                    onHue = { h -> hue = h; exact = null },
-                                )
-                                PickerTab.HEX -> HexInput(color, ::setExact)
+                            key(role, pick.resets) {
+                                when (tab) {
+                                    PickerTab.PRESETS -> Presets(color) { pick.setExact(it) }
+                                    PickerTab.SPECTRUM -> Spectrum(pick.hue, pick.sat, pick.value, color, onSv = pick::dragSv, onHue = pick::dragHue)
+                                    PickerTab.HEX -> HexInput(color) { pick.setExact(it) }
+                                }
                             }
                         }
                     }
                 }
             },
-            confirmButton = { TextButton(onClick = { onApply(color) }) { Text("Apply") } },
+            confirmButton = {
+                TextButton(onClick = { onApply(picks.getValue(ColorRole.ACCENT).picked, picks.getValue(ColorRole.SECONDARY).picked) }) {
+                    Text("Apply")
+                }
+            },
             dismissButton = {
                 Row {
-                    TextButton(onClick = { onApply(null) }) { Text("Reset") }
+                    TextButton(onClick = pick::reset) { Text("Reset") }
                     TextButton(onClick = onDismiss) { Text("Cancel") }
                 }
             },

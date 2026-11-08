@@ -9,7 +9,9 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import com.sasayaki.player.data.ThemeMode
@@ -109,5 +111,10 @@ fun SasayakiTheme(mode: ThemeMode, dynamic: Boolean, accent: Int?, secondary: In
         else -> Light
     }
     val scheme = remember(base, accent, secondary, dark) { base.withAccent(accent, dark).withSecondary(secondary, dark) }
-    MaterialTheme(colorScheme = scheme, content = content)
+    CompositionLocalProvider(LocalBaseColorScheme provides base) {
+        MaterialTheme(colorScheme = scheme, content = content)
+    }
 }
+
+/** The active palette before the user's accent and secondary colors, which pickers fall back to on reset. */
+val LocalBaseColorScheme = staticCompositionLocalOf { Dark }

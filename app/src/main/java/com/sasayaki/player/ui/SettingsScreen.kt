@@ -42,6 +42,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -120,10 +121,9 @@ fun SettingsScreen(graph: AppGraph, bottomPadding: androidx.compose.ui.unit.Dp, 
                 SwitchRow("Dynamic color", "Use colors from your wallpaper", settings.dynamicColor) { v -> update { it.copy(dynamicColor = v) } }
             }
             item {
-                ColorRow(ColorRole.ACCENT, settings.accentColor, isDark(settings.theme)) { c -> update { it.copy(accentColor = c) } }
-            }
-            item {
-                ColorRow(ColorRole.SECONDARY, settings.secondaryColor, isDark(settings.theme)) { c -> update { it.copy(secondaryColor = c) } }
+                ColorsRow(settings.accentColor, settings.secondaryColor, isDark(settings.theme)) { a, s ->
+                    update { it.copy(accentColor = a, secondaryColor = s) }
+                }
             }
             item {
                 SwitchRow("Colors from covers", null, settings.coverTint) { v -> update { it.copy(coverTint = v) } }
@@ -171,20 +171,29 @@ fun SettingsScreen(graph: AppGraph, bottomPadding: androidx.compose.ui.unit.Dp, 
 }
 
 @Composable
-private fun ColorRow(role: ColorRole, current: Int?, dark: Boolean, onApply: (Int?) -> Unit) {
+private fun ColorsRow(accent: Int?, secondary: Int?, dark: Boolean, onApply: (Int?, Int?) -> Unit) {
     var picking by remember { mutableStateOf(false) }
     ListItem(
         modifier = Modifier.clickable { picking = true },
-        headlineContent = { Text(role.title) },
-        supportingContent = { Text(current?.let { "#" + hexOf(it) } ?: "Default") },
-        trailingContent = { Box(Modifier.size(32.dp).clip(CircleShape).background(MaterialTheme.colorScheme.colorOf(role))) },
+        headlineContent = { Text("Colors") },
+        supportingContent = { Text(if (accent == null && secondary == null) "Default" else "Custom") },
+        trailingContent = {
+            // The secondary swatch tucks behind the accent one, ringed in the background color to separate them.
+            Box(Modifier.size(width = 52.dp, height = 36.dp)) {
+                Box(Modifier.align(Alignment.CenterEnd).size(32.dp).clip(CircleShape).background(MaterialTheme.colorScheme.secondary))
+                Box(
+                    Modifier.align(Alignment.CenterStart).size(36.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surface)
+                        .padding(2.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary),
+                )
+            }
+        },
     )
     if (picking) {
-        ColorDialog(
-            role = role,
-            current = current,
+        ColorsDialog(
+            accent = accent,
+            secondary = secondary,
             dark = dark,
-            onApply = { c -> picking = false; onApply(c) },
+            onApply = { a, s -> picking = false; onApply(a, s) },
             onDismiss = { picking = false },
         )
     }
