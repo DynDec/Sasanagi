@@ -81,20 +81,21 @@ fun isDark(mode: ThemeMode): Boolean = when (mode) {
 }
 
 /** Tones of [argb] for a color role, its on-color, its container and on-container, using Material's tone assignments. */
-private fun roleTones(argb: Int, dark: Boolean): List<Color> =
-    (if (dark) listOf(80.0, 20.0, 30.0, 90.0) else listOf(40.0, 100.0, 90.0, 10.0)).map { Color(Tones.tone(argb, it)) }
+private fun roleTones(argb: Int, dark: Boolean, minChroma: Double, maxChroma: Double): List<Color> =
+    (if (dark) listOf(80.0, 20.0, 30.0, 90.0) else listOf(40.0, 100.0, 90.0, 10.0))
+        .map { Color(Tones.tone(argb, it, maxChroma, minChroma)) }
 
-/** Replaces the primary roles with tones of [argb]. */
-fun ColorScheme.withAccent(argb: Int?, dark: Boolean): ColorScheme {
+/** Replaces the primary roles with tones of [argb], at least [minChroma] colorful where sRGB allows. */
+fun ColorScheme.withAccent(argb: Int?, dark: Boolean, minChroma: Double = 0.0): ColorScheme {
     if (argb == null) return this
-    val (c, on, container, onContainer) = roleTones(argb, dark)
+    val (c, on, container, onContainer) = roleTones(argb, dark, minChroma, Double.MAX_VALUE)
     return copy(primary = c, onPrimary = on, primaryContainer = container, onPrimaryContainer = onContainer)
 }
 
-/** Replaces the secondary roles with tones of [argb]. */
-fun ColorScheme.withSecondary(argb: Int?, dark: Boolean): ColorScheme {
+/** Replaces the secondary roles with tones of [argb], with chroma limited to [chroma] where given. */
+fun ColorScheme.withSecondary(argb: Int?, dark: Boolean, chroma: ClosedFloatingPointRange<Double>? = null): ColorScheme {
     if (argb == null) return this
-    val (c, on, container, onContainer) = roleTones(argb, dark)
+    val (c, on, container, onContainer) = roleTones(argb, dark, chroma?.start ?: 0.0, chroma?.endInclusive ?: Double.MAX_VALUE)
     return copy(secondary = c, onSecondary = on, secondaryContainer = container, onSecondaryContainer = onContainer)
 }
 

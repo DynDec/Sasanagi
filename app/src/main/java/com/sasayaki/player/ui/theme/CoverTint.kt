@@ -11,6 +11,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toArgb
 import com.sasayaki.player.data.Cover
 import com.sasayaki.player.data.CoverCache
@@ -23,6 +24,12 @@ import kotlin.math.hypot
 
 /** Lab chroma of tinted surfaces: enough to read as a hue, low enough to stay a background. */
 private const val TINT_CHROMA = 10.0
+
+/** Minimum Lab chroma of the cover accent, so muted covers still give a color that reads as one. */
+private const val ACCENT_MIN_CHROMA = 32.0
+
+/** Lab chroma range of the cover secondary: a quieter companion to the accent, as in Material's schemes. */
+private val SECONDARY_CHROMA = 16.0..24.0
 
 private const val HUE_BUCKETS = 24
 
@@ -85,15 +92,26 @@ fun ColorScheme.withSurfaceTint(argb: Int?): ColorScheme {
     )
 }
 
-/** Themes [content] with surfaces tinted from [cover], fading when the cover changes. */
+/** Themes [content] with surfaces, accent and secondary taken from [cover], fading when the cover changes. */
 @Composable
 fun CoverTinted(cover: Cover?, cache: CoverCache, enabled: Boolean, content: @Composable () -> Unit) {
     val base = MaterialTheme.colorScheme
     val seed by produceState(if (enabled) peekSeed(cover) else null, cover, enabled) {
         value = if (enabled && cover != null) loadSeed(cover, cache) else null
     }
-    val target = remember(base, seed) { base.withSurfaceTint(seed) }
+    val dark = base.surface.luminance() < 0.5f
+    val target = remember(base, seed, dark) {
+        base.withSurfaceTint(seed).withAccent(seed, dark, ACCENT_MIN_CHROMA).withSecondary(seed, dark, SECONDARY_CHROMA)
+    }
     val scheme = base.copy(
+        primary = animated(target.primary),
+        onPrimary = animated(target.onPrimary),
+        primaryContainer = animated(target.primaryContainer),
+        onPrimaryContainer = animated(target.onPrimaryContainer),
+        secondary = animated(target.secondary),
+        onSecondary = animated(target.onSecondary),
+        secondaryContainer = animated(target.secondaryContainer),
+        onSecondaryContainer = animated(target.onSecondaryContainer),
         background = animated(target.background),
         surface = animated(target.surface),
         surfaceContainerLowest = animated(target.surfaceContainerLowest),
