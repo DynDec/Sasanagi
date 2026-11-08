@@ -4,10 +4,8 @@ import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -83,8 +81,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sasayaki.player.AppGraph
 import com.sasayaki.player.ui.theme.CoverTinted
@@ -148,7 +144,7 @@ private fun EntryContent(
     val expanded = remember(entry) { mutableStateMapOf<String, Boolean>() }
     var menu by remember { mutableStateOf(false) }
     var coverPicker by remember { mutableStateOf(false) }
-    var viewing by remember { mutableStateOf<Ref?>(null) }
+    var viewing by remember { mutableStateOf<Cover?>(null) }
     var readme by remember { mutableStateOf<Doc?>(null) }
 
     LaunchedEffect(entry) {
@@ -201,7 +197,7 @@ private fun EntryContent(
             contentPadding = PaddingValues(top = padding.calculateTopPadding(), bottom = bottomPadding + 24.dp),
             modifier = Modifier.fillMaxSize(),
         ) {
-            item { Header(entry, settings, onCoverClick = { viewing = settings.coverOverrides[entry.id] ?: entry.cover?.takeIf { !entry.coverEmbedded } }) }
+            item { Header(entry, settings, onCoverClick = { viewing = entry.coverFor(settings) }) }
 
             // Resume card
             val pv = progress?.let { p -> entry.versions.firstOrNull { it.id == p.versionId } }
@@ -324,7 +320,7 @@ private fun EntryContent(
                     LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         items(entry.images) { img ->
                             CoverImage(
-                                Cover(img), Modifier.size(112.dp).clickable { viewing = img },
+                                Cover(img), Modifier.size(112.dp).clickable { viewing = Cover(img) },
                             )
                         }
                     }
@@ -413,24 +409,6 @@ private fun openExternal(context: android.content.Context, ref: Ref) {
         context.startActivity(Intent.createChooser(intent, ref.fileName).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
     } catch (_: ActivityNotFoundException) {
         Toast.makeText(context, "No app can open this file", Toast.LENGTH_SHORT).show()
-    }
-}
-
-@OptIn(ExperimentalFoundationApi::class)
-@Composable
-private fun ImageViewer(ref: Ref, onDismiss: () -> Unit) {
-    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-        Box(
-            Modifier.fillMaxSize().combinedClickable(onClick = onDismiss),
-            contentAlignment = Alignment.Center,
-        ) {
-            coil3.compose.AsyncImage(
-                model = Cover(ref, maxSize = Cover.SIZE_LARGE),
-                contentDescription = null,
-                contentScale = androidx.compose.ui.layout.ContentScale.Fit,
-                modifier = Modifier.fillMaxWidth(),
-            )
-        }
     }
 }
 

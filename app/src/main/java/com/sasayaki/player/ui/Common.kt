@@ -1,7 +1,10 @@
 package com.sasayaki.player.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.GraphicEq
@@ -19,6 +22,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import coil3.compose.AsyncImage
 import coil3.compose.SubcomposeAsyncImage
 import com.sasayaki.player.data.Cover
 import com.sasayaki.player.data.Entry
@@ -47,6 +53,24 @@ fun CoverImage(cover: Cover?, modifier: Modifier = Modifier, corner: Dp = 12.dp)
         loading = { Placeholder(Modifier) },
         error = { Placeholder(Modifier) },
     )
+}
+
+/** Full-screen view of an image; any tap dismisses it. */
+@Composable
+fun ImageViewer(cover: Cover, onDismiss: () -> Unit) {
+    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+        Box(
+            Modifier.fillMaxSize().clickable(onClick = onDismiss),
+            contentAlignment = Alignment.Center,
+        ) {
+            AsyncImage(
+                model = cover.copy(maxSize = Cover.SIZE_LARGE),
+                contentDescription = null,
+                contentScale = ContentScale.Fit,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+    }
 }
 
 @Composable

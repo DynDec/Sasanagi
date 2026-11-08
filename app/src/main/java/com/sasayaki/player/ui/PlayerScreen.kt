@@ -136,6 +136,7 @@ private fun PlayerContent(graph: AppGraph, onCollapse: () -> Unit, onOpenEntry: 
     val trackDuration = playerDuration ?: durations.getOrNull(s.index)
     var sheet by remember { mutableStateOf<Sheet?>(null) }
     var showSubs by rememberSaveable { mutableStateOf(false) }
+    var viewingCover by remember { mutableStateOf(false) }
     val track = s.track
     // Height of WorkBar: 4dp padding, 20dp bar and a labelSmall time line.
     val workBarSpace = 24.dp + with(LocalDensity.current) { MaterialTheme.typography.labelSmall.lineHeight.toDp() }
@@ -173,11 +174,15 @@ private fun PlayerContent(graph: AppGraph, onCollapse: () -> Unit, onOpenEntry: 
                 }
                 AnimatedContent(subsShown, label = "art", modifier = if (subsShown) Modifier.weight(1f) else Modifier) { subs ->
                     if (subs) CuePanel(cues, position, onSeek = { engine.seekTo(it) })
-                    else CoverImage(
-                        entry.coverFor(settings, Cover.SIZE_LARGE),
-                        Modifier.widthIn(max = 420.dp).fillMaxWidth().aspectRatio(1f),
-                        corner = 24.dp,
-                    )
+                    else {
+                        val cover = entry.coverFor(settings, Cover.SIZE_LARGE)
+                        CoverImage(
+                            cover,
+                            Modifier.widthIn(max = 420.dp).fillMaxWidth().aspectRatio(1f)
+                                .then(if (cover != null) Modifier.clickable { viewingCover = true } else Modifier),
+                            corner = 24.dp,
+                        )
+                    }
                 }
                 if (!subsShown) Spacer(Modifier.weight(if (workBar) 2f else 1f))
             }
@@ -231,6 +236,7 @@ private fun PlayerContent(graph: AppGraph, onCollapse: () -> Unit, onOpenEntry: 
         }
     }
 
+    if (viewingCover) entry.coverFor(settings)?.let { ImageViewer(it, onDismiss = { viewingCover = false }) }
     when (sheet) {
         Sheet.SEGMENTS -> ModalBottomSheet(onDismissRequest = { sheet = null }) {
             SegmentList(version, durations, s.index, onPick = { engine.seekToTrack(it); sheet = null })
