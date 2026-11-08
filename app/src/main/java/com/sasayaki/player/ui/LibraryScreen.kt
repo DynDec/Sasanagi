@@ -108,7 +108,7 @@ fun LibraryScreen(
                     SortMode.TITLE -> list.sortedWith { a, b -> Naming.compareNatural(a.title, b.title) }
                     SortMode.RECENTLY_ADDED -> list.sortedByDescending { it.modified }
                     SortMode.RECENTLY_PLAYED -> list.sortedWith(
-                        compareByDescending<Entry> { progress[it.id]?.updatedAt ?: 0 }.thenComparator { a, b -> Naming.compareNatural(a.title, b.title) }
+                        compareByDescending<Entry> { progress[it.id]?.updatedAt ?: 0L }.thenComparator { a, b -> Naming.compareNatural(a.title, b.title) }
                     )
                 }
             }
