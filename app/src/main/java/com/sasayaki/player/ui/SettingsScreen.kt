@@ -10,7 +10,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.draw.clip
+import com.sasayaki.player.ui.theme.LocalBaseColorScheme
 import com.sasayaki.player.ui.theme.isDark
+import com.sasayaki.player.ui.theme.withAccent
+import com.sasayaki.player.ui.theme.withSecondary
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -176,6 +179,8 @@ fun SettingsScreen(graph: AppGraph, bottomPadding: androidx.compose.ui.unit.Dp, 
 @Composable
 private fun ColorsRow(accent: Int?, secondary: Int?, dark: Boolean, onApply: (Int?, Int?) -> Unit) {
     var picking by remember { mutableStateOf(false) }
+    // The theme may carry cover colors; the swatches show the picked ones.
+    val picked = LocalBaseColorScheme.current.withAccent(accent, dark).withSecondary(secondary, dark)
     ListItem(
         modifier = Modifier.clickable { picking = true },
         headlineContent = { Text("Colors") },
@@ -183,10 +188,10 @@ private fun ColorsRow(accent: Int?, secondary: Int?, dark: Boolean, onApply: (In
         trailingContent = {
             // The secondary swatch tucks behind the accent one, ringed in the background color to separate them.
             Box(Modifier.size(width = 52.dp, height = 36.dp)) {
-                Box(Modifier.align(Alignment.CenterEnd).size(32.dp).clip(CircleShape).background(MaterialTheme.colorScheme.secondary))
+                Box(Modifier.align(Alignment.CenterEnd).size(32.dp).clip(CircleShape).background(picked.secondary))
                 Box(
                     Modifier.align(Alignment.CenterStart).size(36.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surface)
-                        .padding(2.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary),
+                        .padding(2.dp).clip(CircleShape).background(picked.primary),
                 )
             }
         },

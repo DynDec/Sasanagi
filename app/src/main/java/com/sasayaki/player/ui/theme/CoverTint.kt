@@ -60,16 +60,19 @@ fun ColorScheme.withSurfaceTint(argb: Int?, dark: Boolean): ColorScheme {
     )
 }
 
-/** Themes [content] with surfaces, accent and secondary taken from [cover], fading when the cover changes. */
+/**
+ * Themes [content] with accent and secondary taken from [cover], and the surfaces too when [surfaces] is set,
+ * fading when the cover changes.
+ */
 @Composable
-fun CoverTinted(cover: Cover?, cache: CoverCache, enabled: Boolean, content: @Composable () -> Unit) {
+fun CoverTinted(cover: Cover?, cache: CoverCache, enabled: Boolean, surfaces: Boolean = true, content: @Composable () -> Unit) {
     val base = MaterialTheme.colorScheme
     val seed by produceState(if (enabled) peekSeed(cover) else null, cover, enabled) {
         value = if (enabled && cover != null) loadSeed(cover, cache) else null
     }
     val dark = base.surface.luminance() < 0.5f
-    val target = remember(base, seed, dark) {
-        base.withSurfaceTint(seed, dark).withAccent(seed, dark, ACCENT_MIN_CHROMA).withSecondary(seed, dark, SECONDARY_CHROMA)
+    val target = remember(base, seed, dark, surfaces) {
+        base.withSurfaceTint(seed.takeIf { surfaces }, dark).withAccent(seed, dark, ACCENT_MIN_CHROMA).withSecondary(seed, dark, SECONDARY_CHROMA)
     }
     val scheme = base.copy(
         primary = animated(target.primary),

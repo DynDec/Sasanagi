@@ -71,6 +71,8 @@ import com.sasayaki.player.ui.LibraryScreen
 import com.sasayaki.player.ui.MiniPlayer
 import com.sasayaki.player.ui.PlayerScreen
 import com.sasayaki.player.ui.SettingsScreen
+import com.sasayaki.player.ui.coverFor
+import com.sasayaki.player.ui.theme.CoverTinted
 import com.sasayaki.player.ui.theme.SasayakiTheme
 import com.sasayaki.player.ui.theme.isDark
 import kotlinx.coroutines.launch
@@ -198,7 +200,14 @@ private fun App(graph: AppGraph, openPlayer: androidx.compose.runtime.MutableSta
     val engineState by graph.engine.state.collectAsStateWithLifecycle()
     val library by graph.library.library.collectAsStateWithLifecycle()
     val loaded by graph.library.loaded.collectAsStateWithLifecycle()
+    val settings by graph.settings.settings.collectAsStateWithLifecycle()
+    val progress by graph.progress.all.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
+    // The whole app takes its accent from the last played work, which stays loaded in the mini player
+    // unless it was closed.
+    val lastPlayed = engineState.entry ?: remember(library, progress) {
+        progress.values.maxByOrNull { it.updatedAt }?.let { graph.library.entry(it.entryId) }
+    }
 
     val notifications = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {}
     LaunchedEffect(Unit) {
@@ -228,63 +237,65 @@ private fun App(graph: AppGraph, openPlayer: androidx.compose.runtime.MutableSta
     BackHandler(enabled = openPlayer.value) { openPlayer.value = false }
     BackHandler(enabled = !openPlayer.value && !picker && stack.size > 1) { pop() }
 
-    Box(Modifier.fillMaxSize()) {
-        AnimatedContent(stack.lastIndex to top, transitionSpec = { fadeIn() togetherWith fadeOut() }, label = "nav") { (index, route) ->
-            screens.SaveableStateProvider(screenKey(index, route)) {
-                when (route) {
-                    Route.Library -> LibraryScreen(
-                        graph, bottomPadding,
-                        onOpen = { stack.add(Route.Entry(it.id)) },
-                        onSettings = { stack.add(Route.Settings) },
-                        onAddFolder = { picker = true },
-                    )
-                    is Route.Entry -> {
-                        val entry = remember(library, route.id) { graph.library.entry(route.id) }
-                        // After process death the stack is restored before the index has loaded.
-                        if (entry == null) { if (loaded) LaunchedEffect(Unit) { pop() } }
-                        else EntryScreen(graph, entry, bottomPadding, onBack = { pop() }, onOpenPlayer = { openPlayer.value = true })
+    CoverTinted(lastPlayed?.coverFor(settings), graph.covers, settings.coverTint, surfaces = false) {
+        Box(Modifier.fillMaxSize()) {
+            AnimatedContent(stack.lastIndex to top, transitionSpec = { fadeIn() togetherWith fadeOut() }, label = "nav") { (index, route) ->
+                screens.SaveableStateProvider(screenKey(index, route)) {
+                    when (route) {
+                        Route.Library -> LibraryScreen(
+                            graph, bottomPadding,
+                            onOpen = { stack.add(Route.Entry(it.id)) },
+                            onSettings = { stack.add(Route.Settings) },
+                            onAddFolder = { picker = true },
+                        )
+                        is Route.Entry -> {
+                            val entry = remember(library, route.id) { graph.library.entry(route.id) }
+                            // After process death the stack is restored before the index has loaded.
+                            if (entry == null) { if (loaded) LaunchedEffect(Unit) { pop() } }
+                            else EntryScreen(graph, entry, bottomPadding, onBack = { pop() }, onOpenPlayer = { openPlayer.value = true })
+                        }
+                        Route.Settings -> SettingsScreen(graph, bottomPadding, onBack = { pop() }, onAddFolder = { picker = true })
                     }
-                    Route.Settings -> SettingsScreen(graph, bottomPadding, onBack = { pop() }, onAddFolder = { picker = true })
                 }
             }
-        }
-
-        AnimatedVisibility(
-            visible = hasMedia && !openPlayer.value,
-            enter = slideInVertically { it },
-            exit = slideOutVertically { it },
-            modifier = Modifier.align(Alignment.BottomCenter),
-        ) {
-            MiniPlayer(graph, onExpand = { openPlayer.value = true })
-        }
-
-        AnimatedVisibility(
-            visible = openPlayer.value && hasMedia,
-            enter = slideInVertically { it },
-            exit = slideOutVertically { it },
-        ) {
-            PlayerScreen(
-                graph,
-                onCollapse = { openPlayer.value = false },
-                onOpenEntry = {
-                    val id = engineState.entry?.id
-                    openPlayer.value = false
-                    if (id != null && (top as? Route.Entry)?.id != id) stack.add(Route.Entry(id))
-                },
-            )
-        }
-
-        if (picker) {
-            FolderPicker(
-                onPick = { dir ->
-                    picker = false
-                    scope.launch {
-                        graph.settings.update { s -> s.copy(roots = (s.roots + dir.absolutePath).distinct()) }
-                        graph.library.rescan()
-                    }
-                },
-                onDismiss = { picker = false },
-            )
+    
+            AnimatedVisibility(
+                visible = hasMedia && !openPlayer.value,
+                enter = slideInVertically { it },
+                exit = slideOutVertically { it },
+                modifier = Modifier.align(Alignment.BottomCenter),
+            ) {
+                MiniPlayer(graph, onExpand = { openPlayer.value = true })
+            }
+    
+            AnimatedVisibility(
+                visible = openPlayer.value && hasMedia,
+                enter = slideInVertically { it },
+                exit = slideOutVertically { it },
+            ) {
+                PlayerScreen(
+                    graph,
+                    onCollapse = { openPlayer.value = false },
+                    onOpenEntry = {
+                        val id = engineState.entry?.id
+                        openPlayer.value = false
+                        if (id != null && (top as? Route.Entry)?.id != id) stack.add(Route.Entry(id))
+                    },
+                )
+            }
+    
+            if (picker) {
+                FolderPicker(
+                    onPick = { dir ->
+                        picker = false
+                        scope.launch {
+                            graph.settings.update { s -> s.copy(roots = (s.roots + dir.absolutePath).distinct()) }
+                            graph.library.rescan()
+                        }
+                    },
+                    onDismiss = { picker = false },
+                )
+            }
         }
     }
 }
