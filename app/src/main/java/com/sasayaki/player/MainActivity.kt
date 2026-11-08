@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.ComponentName
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.content.res.Configuration
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -18,6 +19,9 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.CubicBezierEasing
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
@@ -64,6 +68,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.google.common.util.concurrent.ListenableFuture
+import com.sasayaki.player.data.ThemeMode
 import com.sasayaki.player.playback.PlaybackService
 import com.sasayaki.player.ui.EntryScreen
 import com.sasayaki.player.ui.FolderPicker
@@ -86,16 +91,21 @@ class MainActivity : ComponentActivity() {
         val graph = (application as SasayakiApp).graph
         openPlayer.value = savedInstanceState?.getBoolean(KEY_PLAYER_OPEN)
             ?: (intent?.getBooleanExtra(EXTRA_OPEN_PLAYER, false) == true)
+        // Before setContent, so the first frame already gets the system bar insets. Enabled any later,
+        // the content is first laid out without them and jumps once they arrive.
+        val systemDark = resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES
+        edgeToEdge(when (graph.settings.current.theme) {
+            ThemeMode.DARK -> true
+            ThemeMode.LIGHT -> false
+            ThemeMode.SYSTEM -> systemDark
+        })
+        // With the index usually loaded by now, the mini player is there from the first frame instead of
+        // sliding in after the library. Otherwise App restores the session once the index has loaded.
+        if (hasStorageAccess() && graph.library.loaded.value) graph.engine.restoreLastSession()
         setContent {
             val settings by graph.settings.settings.collectAsStateWithLifecycle()
             val dark = isDark(settings.theme)
-            LaunchedEffect(dark) {
-                val transparent = android.graphics.Color.TRANSPARENT
-                enableEdgeToEdge(
-                    statusBarStyle = if (dark) SystemBarStyle.dark(transparent) else SystemBarStyle.light(transparent, transparent),
-                    navigationBarStyle = if (dark) SystemBarStyle.dark(transparent) else SystemBarStyle.light(transparent, transparent),
-                )
-            }
+            LaunchedEffect(dark) { edgeToEdge(dark) }
             SasayakiTheme(settings.theme, settings.dynamicColor, settings.accentColor, settings.secondaryColor) {
                 Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
                     var granted by remember { mutableStateOf(hasStorageAccess()) }
@@ -104,6 +114,12 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    private fun edgeToEdge(dark: Boolean) {
+        val transparent = android.graphics.Color.TRANSPARENT
+        val style = if (dark) SystemBarStyle.dark(transparent) else SystemBarStyle.light(transparent, transparent)
+        enableEdgeToEdge(statusBarStyle = style, navigationBarStyle = style)
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -221,7 +237,8 @@ private fun App(graph: AppGraph, openPlayer: androidx.compose.runtime.MutableSta
     }
 
     val hasMedia = engineState.entry != null
-    val miniHeight = if (hasMedia) 73.dp else 0.dp
+    // Follows the mini player's slide, so the end of a list moves along with it.
+    val miniHeight by animateDpAsState(if (hasMedia) 73.dp else 0.dp, if (hasMedia) miniEnter() else miniExit(), label = "mini")
     val navBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     val bottomPadding = miniHeight + navBottom
     val top = stack.last()
@@ -261,8 +278,8 @@ private fun App(graph: AppGraph, openPlayer: androidx.compose.runtime.MutableSta
     
             AnimatedVisibility(
                 visible = hasMedia && !openPlayer.value,
-                enter = slideInVertically { it },
-                exit = slideOutVertically { it },
+                enter = slideInVertically(miniEnter()) { it } + fadeIn(miniEnter()),
+                exit = slideOutVertically(miniExit()) { it } + fadeOut(miniExit()),
                 modifier = Modifier.align(Alignment.BottomCenter),
             ) {
                 MiniPlayer(graph, onExpand = { openPlayer.value = true })
@@ -299,3 +316,7 @@ private fun App(graph: AppGraph, openPlayer: androidx.compose.runtime.MutableSta
         }
     }
 }
+
+// Material's emphasized decelerate and accelerate curves: entering moves settle in, exiting ones speed off.
+private fun <T> miniEnter() = tween<T>(400, easing = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1f))
+private fun <T> miniExit() = tween<T>(200, easing = CubicBezierEasing(0.3f, 0f, 0.8f, 0.15f))

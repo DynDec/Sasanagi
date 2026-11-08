@@ -37,7 +37,9 @@ fun MiniPlayer(graph: AppGraph, onExpand: () -> Unit, modifier: Modifier = Modif
     val entry = s.entry ?: return
     val version = s.version ?: return
     val position by rememberPosition(engine, 500)
-    val duration by rememberDuration(engine)
+    val playerDuration by rememberDuration(engine)
+    // The player knows the duration only once prepared; the cached one fills in so the bar doesn't start empty.
+    val duration = playerDuration ?: s.track?.let { graph.durations[it.ref] }
 
     Surface(
         color = MaterialTheme.colorScheme.surfaceContainerHigh,

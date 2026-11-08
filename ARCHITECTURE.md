@@ -109,7 +109,8 @@ These heuristics were tuned against a real library of DLsite-style downloads. `S
     - `seekGlobal` seeks on the whole-work timeline, using durations from `DurationRepository`;
     - `switchVersion` keeps the current track and position when the target has the same recording (SE on/off, WAV/MP3, filled tracks). Candidates come from the key, the core name and the index, and need durations within 3% (or 5 s), or a core-name match while durations are unknown. Otherwise the target resumes where it was last left (`Progress.versions`).
   - It saves progress every 5 s and on pause or track change. Resuming rewinds a few seconds after a long pause. Durations the player reports are recorded back into `DurationRepository`.
-  - Artwork is put into `MediaMetadata` as **bytes**, because System UI cannot read `file://` URIs in the app's private cache.
+  - Artwork is put into `MediaMetadata` as **bytes**, because System UI cannot read `file://` URIs in the app's private cache. `play` loads the queue without it, so the UI and playback never wait on the read, then swaps in items with artwork; the URIs are unchanged, so ExoPlayer updates them in place without interrupting playback.
+  - `MainActivity.onCreate` restores the last session (paused) when the index has already loaded, so the mini player is in the first frame instead of sliding in after the library.
 - **`PlaybackService`** is a `MediaSessionService` that wraps the engine's player. It provides:
   - the media notification and lock-screen controls;
   - `onPlaybackResumption`, which rebuilds the last session from saved progress;

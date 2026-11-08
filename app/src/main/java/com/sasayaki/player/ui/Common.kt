@@ -25,7 +25,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil3.compose.AsyncImage
-import coil3.compose.SubcomposeAsyncImage
 import com.sasayaki.player.data.Cover
 import com.sasayaki.player.data.Entry
 import com.sasayaki.player.data.Settings
@@ -40,19 +39,14 @@ fun Entry.coverFor(settings: Settings, size: Int = Cover.SIZE_THUMB): Cover? =
 @Composable
 fun CoverImage(cover: Cover?, modifier: Modifier = Modifier, corner: Dp = 12.dp) {
     val shape = RoundedCornerShape(corner)
-    val base = modifier.clip(shape).background(MaterialTheme.colorScheme.surfaceContainerHighest)
-    if (cover == null) {
-        Placeholder(base)
-        return
+    Box(modifier.clip(shape).background(MaterialTheme.colorScheme.surfaceContainerHighest)) {
+        // The image fades in over the placeholder (thumbnails are opaque JPEGs), which stays put
+        // while loading and when the image can't be read.
+        Placeholder(Modifier.matchParentSize())
+        if (cover != null) {
+            AsyncImage(model = cover, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.matchParentSize())
+        }
     }
-    SubcomposeAsyncImage(
-        model = cover,
-        contentDescription = null,
-        contentScale = ContentScale.Crop,
-        modifier = base,
-        loading = { Placeholder(Modifier) },
-        error = { Placeholder(Modifier) },
-    )
 }
 
 /** Full-screen view of an image; any tap dismisses it. */

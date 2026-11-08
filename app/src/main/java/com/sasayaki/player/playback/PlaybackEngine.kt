@@ -160,12 +160,16 @@ class PlaybackEngine(
     // ---- Queue ----
 
     private suspend fun buildItems(entry: Entry, version: Version): List<MediaItem> {
+        val art = artwork(entry)
+        return version.tracks.mapIndexed { i, t -> mediaItem(entry, version, i, t, art) }
+    }
+
+    private suspend fun artwork(entry: Entry): ByteArray? {
         val override = settings.current.coverOverrides[entry.id]
         val cover = override?.let { Cover(it, maxSize = ART_SIZE) } ?: entry.cover?.let { Cover(it, entry.coverEmbedded, ART_SIZE) }
         // Artwork travels as bytes: System UI cannot open files in the app's private cache.
-        val art: ByteArray? = cover?.let { withTimeoutOrNull(2500) { covers.get(it) } }
+        return cover?.let { withTimeoutOrNull(2500) { covers.get(it) } }
             ?.let { f -> withContext(Dispatchers.IO) { runCatching { f.readBytes() }.getOrNull() } }
-        return version.tracks.mapIndexed { i, t -> mediaItem(entry, version, i, t, art) }
     }
 
     /** Items for system media resumption (e.g. a headset play button after the app was killed). */
@@ -181,16 +185,24 @@ class PlaybackEngine(
         return MediaSession.MediaItemsWithStartPosition(items, idx, pos)
     }
 
+    /**
+     * Loads [version] synchronously, so the UI shows it in the next frame. The notification artwork
+     * follows once it's read; swapping in items with the same URIs doesn't interrupt playback.
+     */
     fun play(entry: Entry, version: Version, index: Int = 0, positionMs: Long = 0, start: Boolean = true) {
+        val items = version.tracks.mapIndexed { i, t -> mediaItem(entry, version, i, t, null) }
+        _state.update { it.copy(entry = entry, version = version, index = index, error = null) }
+        player.setMediaItems(items, index.coerceIn(0, items.lastIndex.coerceAtLeast(0)), positionMs.coerceAtLeast(0))
+        player.prepare()
+        player.playWhenReady = start
+        saveProgress()
         scope.launch {
-            val items = buildItems(entry, version)
-            _state.update { it.copy(entry = entry, version = version, index = index, error = null) }
-            player.setMediaItems(items, index.coerceIn(0, items.lastIndex.coerceAtLeast(0)), positionMs.coerceAtLeast(0))
-            player.prepare()
-            player.playWhenReady = start
-            saveProgress()
-            launch { durations.ensure(version.tracks) }
+            val art = artwork(entry) ?: return@launch
+            // Another work or version may have been loaded meanwhile.
+            if (player.mediaItemCount != items.size || player.getMediaItemAt(0).mediaId != items[0].mediaId) return@launch
+            player.replaceMediaItems(0, items.size, version.tracks.mapIndexed { i, t -> mediaItem(entry, version, i, t, art) })
         }
+        scope.launch { durations.ensure(version.tracks) }
     }
 
     /** Continues an entry where it was left, or starts its preferred version. */
