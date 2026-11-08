@@ -12,6 +12,7 @@ Stack: Kotlin and Jetpack Compose (Material 3), Media3/ExoPlayer, Coil 3, kotlin
 
 ```bash
 ./gradlew :app:assembleDebug          # APK -> app/build/outputs/apk/debug/app-debug.apk
+./gradlew :app:assembleRelease        # R8-minified APK -> app/build/outputs/apk/release/app-release.apk
 ./gradlew :app:compileDebugKotlin     # fast compile check
 ./gradlew :app:testDebugUnitTest      # JVM unit tests
 ./gradlew :app:testDebugUnitTest --tests "*ScanSampleTest*"   # single test
@@ -24,6 +25,17 @@ SASAYAKI_OUT="$TEMP/scan-dump.txt" ./gradlew :app:testDebugUnitTest --tests "*Sc
 ```
 
 `CoverSeedSampleTest` does the same for cover colors: it renders each sample cover next to the dark and light surface, accent and secondary colors picked from it, to `SASAYAKI_SEEDS_OUT` (default `app/build/cover-seeds.png`). Render it before and after changing `CoverSeed` and compare.
+
+Release builds are signed with the key described in `keystore.properties` at the project root (git-ignored, like `*.jks`). Without that file they fall back to the debug key, so they still install over a debug build:
+
+```properties
+storeFile=C:/path/to/sasayaki.jks
+storePassword=...
+keyAlias=...
+keyPassword=...
+```
+
+R8 strips anything reached only by reflection. After adding serialized classes, libraries or anything instantiated by name (services, providers, Coil components), check the release build on the device as well.
 
 Device testing uses the user's physical phone over adb, not an emulator. On Git Bash, set `MSYS_NO_PATHCONV=1` so device paths aren't rewritten. adb hangs when a directory is pushed to a destination with a Japanese name: push under an ASCII name, then rename it on the device.
 

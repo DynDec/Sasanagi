@@ -6,6 +6,11 @@ build/
 # Local machine config (SDK path)
 local.properties
 
+# Release signing
+keystore.properties
+*.jks
+*.keystore
+
 # IDE
 .idea/
 *.iml
