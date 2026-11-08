@@ -80,19 +80,26 @@ fun isDark(mode: ThemeMode): Boolean = when (mode) {
     ThemeMode.SYSTEM -> isSystemInDarkTheme()
 }
 
-/** Replaces the secondary roles with tones of [argb], using Material's tone assignments. */
+/** Tones of [argb] for a color role, its on-color, its container and on-container, using Material's tone assignments. */
+private fun roleTones(argb: Int, dark: Boolean): List<Color> =
+    (if (dark) listOf(80.0, 20.0, 30.0, 90.0) else listOf(40.0, 100.0, 90.0, 10.0)).map { Color(Tones.tone(argb, it)) }
+
+/** Replaces the primary roles with tones of [argb]. */
+fun ColorScheme.withAccent(argb: Int?, dark: Boolean): ColorScheme {
+    if (argb == null) return this
+    val (c, on, container, onContainer) = roleTones(argb, dark)
+    return copy(primary = c, onPrimary = on, primaryContainer = container, onPrimaryContainer = onContainer)
+}
+
+/** Replaces the secondary roles with tones of [argb]. */
 fun ColorScheme.withSecondary(argb: Int?, dark: Boolean): ColorScheme {
     if (argb == null) return this
-    fun t(tone: Double) = Color(Tones.tone(argb, tone))
-    return if (dark) {
-        copy(secondary = t(80.0), onSecondary = t(20.0), secondaryContainer = t(30.0), onSecondaryContainer = t(90.0))
-    } else {
-        copy(secondary = t(40.0), onSecondary = t(100.0), secondaryContainer = t(90.0), onSecondaryContainer = t(10.0))
-    }
+    val (c, on, container, onContainer) = roleTones(argb, dark)
+    return copy(secondary = c, onSecondary = on, secondaryContainer = container, onSecondaryContainer = onContainer)
 }
 
 @Composable
-fun SasayakiTheme(mode: ThemeMode, dynamic: Boolean, secondary: Int?, content: @Composable () -> Unit) {
+fun SasayakiTheme(mode: ThemeMode, dynamic: Boolean, accent: Int?, secondary: Int?, content: @Composable () -> Unit) {
     val dark = isDark(mode)
     val ctx = LocalContext.current
     val base = when {
@@ -100,6 +107,6 @@ fun SasayakiTheme(mode: ThemeMode, dynamic: Boolean, secondary: Int?, content: @
         dark -> Dark
         else -> Light
     }
-    val scheme = remember(base, secondary, dark) { base.withSecondary(secondary, dark) }
+    val scheme = remember(base, accent, secondary, dark) { base.withAccent(accent, dark).withSecondary(secondary, dark) }
     MaterialTheme(colorScheme = scheme, content = content)
 }

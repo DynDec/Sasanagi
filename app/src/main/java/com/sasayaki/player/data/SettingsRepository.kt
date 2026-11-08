@@ -23,6 +23,7 @@ data class Settings(
     val roots: List<String> = emptyList(),
     val theme: ThemeMode = ThemeMode.DARK,
     val dynamicColor: Boolean = false,
+    val accentColor: Int? = null,
     val secondaryColor: Int? = null,
     val preferLossless: Boolean = true,
     val skipBackSec: Int = 10,
@@ -40,6 +41,7 @@ class SettingsRepository(private val context: Context, scope: CoroutineScope) {
         val roots = stringPreferencesKey("roots")
         val theme = stringPreferencesKey("theme")
         val dynamic = booleanPreferencesKey("dynamic_color")
+        val accent = intPreferencesKey("accent_color")
         val secondary = intPreferencesKey("secondary_color")
         val lossless = booleanPreferencesKey("prefer_lossless")
         val back = intPreferencesKey("skip_back")
@@ -56,6 +58,7 @@ class SettingsRepository(private val context: Context, scope: CoroutineScope) {
         roots = p[K.roots]?.split('\n')?.filter { it.isNotBlank() } ?: emptyList(),
         theme = p[K.theme]?.let { runCatching { ThemeMode.valueOf(it) }.getOrNull() } ?: ThemeMode.DARK,
         dynamicColor = p[K.dynamic] ?: false,
+        accentColor = p[K.accent],
         secondaryColor = p[K.secondary],
         preferLossless = p[K.lossless] ?: true,
         skipBackSec = p[K.back] ?: 10,
@@ -80,6 +83,7 @@ class SettingsRepository(private val context: Context, scope: CoroutineScope) {
             p[K.roots] = s.roots.joinToString("\n")
             p[K.theme] = s.theme.name
             p[K.dynamic] = s.dynamicColor
+            if (s.accentColor != null) p[K.accent] = s.accentColor else p.remove(K.accent)
             if (s.secondaryColor != null) p[K.secondary] = s.secondaryColor else p.remove(K.secondary)
             p[K.lossless] = s.preferLossless
             p[K.back] = s.skipBackSec

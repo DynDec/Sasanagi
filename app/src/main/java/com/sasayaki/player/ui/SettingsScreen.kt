@@ -120,21 +120,10 @@ fun SettingsScreen(graph: AppGraph, bottomPadding: androidx.compose.ui.unit.Dp, 
                 SwitchRow("Dynamic color", "Use colors from your wallpaper", settings.dynamicColor) { v -> update { it.copy(dynamicColor = v) } }
             }
             item {
-                var picking by remember { mutableStateOf(false) }
-                ListItem(
-                    modifier = Modifier.clickable { picking = true },
-                    headlineContent = { Text("Secondary color") },
-                    supportingContent = { Text(settings.secondaryColor?.let { "#" + hexOf(it) } ?: "Default") },
-                    trailingContent = { Box(Modifier.size(32.dp).clip(CircleShape).background(MaterialTheme.colorScheme.secondary)) },
-                )
-                if (picking) {
-                    SecondaryColorDialog(
-                        current = settings.secondaryColor,
-                        dark = isDark(settings.theme),
-                        onApply = { c -> picking = false; update { it.copy(secondaryColor = c) } },
-                        onDismiss = { picking = false },
-                    )
-                }
+                ColorRow(ColorRole.ACCENT, settings.accentColor, isDark(settings.theme)) { c -> update { it.copy(accentColor = c) } }
+            }
+            item {
+                ColorRow(ColorRole.SECONDARY, settings.secondaryColor, isDark(settings.theme)) { c -> update { it.copy(secondaryColor = c) } }
             }
 
             item { SectionTitle("Playback") }
@@ -175,6 +164,26 @@ fun SettingsScreen(graph: AppGraph, bottomPadding: androidx.compose.ui.unit.Dp, 
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun ColorRow(role: ColorRole, current: Int?, dark: Boolean, onApply: (Int?) -> Unit) {
+    var picking by remember { mutableStateOf(false) }
+    ListItem(
+        modifier = Modifier.clickable { picking = true },
+        headlineContent = { Text(role.title) },
+        supportingContent = { Text(current?.let { "#" + hexOf(it) } ?: "Default") },
+        trailingContent = { Box(Modifier.size(32.dp).clip(CircleShape).background(MaterialTheme.colorScheme.colorOf(role))) },
+    )
+    if (picking) {
+        ColorDialog(
+            role = role,
+            current = current,
+            dark = dark,
+            onApply = { c -> picking = false; onApply(c) },
+            onDismiss = { picking = false },
+        )
     }
 }
 

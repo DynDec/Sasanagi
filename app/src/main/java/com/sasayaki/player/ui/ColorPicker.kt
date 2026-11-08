@@ -22,6 +22,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -56,6 +57,7 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import com.sasayaki.player.ui.theme.withAccent
 import com.sasayaki.player.ui.theme.withSecondary
 
 // Ordered around the hue wheel, one full grid of PRESET_COLUMNS × 4.
@@ -77,13 +79,26 @@ fun hexOf(argb: Int): String = "%06X".format(argb and 0xFFFFFF)
 
 private fun hsvOf(argb: Int) = FloatArray(3).also { AndroidColor.colorToHSV(argb, it) }
 
+/** Which color role a [ColorDialog] picks. */
+enum class ColorRole(val title: String) { ACCENT("Accent color"), SECONDARY("Secondary color") }
+
+fun ColorScheme.colorOf(role: ColorRole): Color = when (role) {
+    ColorRole.ACCENT -> primary
+    ColorRole.SECONDARY -> secondary
+}
+
+private fun ColorScheme.with(role: ColorRole, argb: Int, dark: Boolean): ColorScheme = when (role) {
+    ColorRole.ACCENT -> withAccent(argb, dark)
+    ColorRole.SECONDARY -> withSecondary(argb, dark)
+}
+
 /**
- * Picks the secondary color. The dialog is themed with the color being picked, so its own
+ * Picks the color for [role]. The dialog is themed with the color being picked, so its own
  * controls preview it. [onApply] gets null for the default palette.
  */
 @Composable
-fun SecondaryColorDialog(current: Int?, dark: Boolean, onApply: (Int?) -> Unit, onDismiss: () -> Unit) {
-    val start = current ?: MaterialTheme.colorScheme.secondary.toArgb()
+fun ColorDialog(role: ColorRole, current: Int?, dark: Boolean, onApply: (Int?) -> Unit, onDismiss: () -> Unit) {
+    val start = current ?: MaterialTheme.colorScheme.colorOf(role).toArgb()
     var tab by remember { mutableStateOf(PickerTab.PRESETS) }
     // HSV drives the spectrum; presets and hex input also set an exact color, which HSV can't round-trip.
     val hsv = remember { hsvOf(start) }
@@ -101,10 +116,10 @@ fun SecondaryColorDialog(current: Int?, dark: Boolean, onApply: (Int?) -> Unit, 
         exact = argb
     }
 
-    MaterialTheme(colorScheme = MaterialTheme.colorScheme.withSecondary(color, dark)) {
+    MaterialTheme(colorScheme = MaterialTheme.colorScheme.with(role, color, dark)) {
         AlertDialog(
             onDismissRequest = onDismiss,
-            title = { Text("Secondary color") },
+            title = { Text(role.title) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                     SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
