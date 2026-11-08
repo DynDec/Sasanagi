@@ -72,6 +72,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
@@ -85,6 +86,8 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -136,6 +139,9 @@ private fun PlayerContent(graph: AppGraph, onCollapse: () -> Unit, onOpenEntry: 
     var sheet by remember { mutableStateOf<Sheet?>(null) }
     var showSubs by rememberSaveable { mutableStateOf(false) }
     val track = s.track
+    val density = LocalDensity.current
+    val workBarEstimate = with(density) { (24.dp + MaterialTheme.typography.labelSmall.lineHeight.toDp()).roundToPx() }
+    var workBarHeight by remember { mutableIntStateOf(workBarEstimate) }
 
     val cues by produceState<List<Cue>>(emptyList(), track?.subtitle) {
         value = track?.subtitle?.let { withContext(Dispatchers.IO) { Subtitles.load(it) } } ?: emptyList()
@@ -155,14 +161,14 @@ private fun PlayerContent(graph: AppGraph, onCollapse: () -> Unit, onOpenEntry: 
                 IconButton(onClick = { sheet = Sheet.SEGMENTS }) { Icon(Icons.AutoMirrored.Rounded.QueueMusic, "Segments") }
             }
 
-            // Whole-work bar, then artwork or subtitles
-            // The cover stays centered and the bar sits midway between the top bar and the cover.
+            // Whole-work bar, then artwork or subtitles. The cover stays centered and the bar
+            // sits midway between the top bar and the cover.
+            val workBar = settings.workBar && version.tracks.size > 1
             Column(Modifier.weight(1f).fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
                 val subsShown = showSubs && cues.isNotEmpty()
-                val workBar = settings.workBar && version.tracks.size > 1
                 if (!subsShown) Spacer(Modifier.weight(1f))
                 if (workBar) {
-                    Box(Modifier.widthIn(max = 420.dp)) {
+                    Box(Modifier.widthIn(max = 420.dp).onSizeChanged { workBarHeight = it.height }) {
                         WorkBar(version, durations, s.index, position, onSeekTrack = { engine.seekToTrack(it) }, onSeekGlobal = { engine.seekGlobal(it) })
                     }
                     if (!subsShown) Spacer(Modifier.weight(1f))
@@ -202,6 +208,8 @@ private fun PlayerContent(graph: AppGraph, onCollapse: () -> Unit, onOpenEntry: 
 
             Spacer(Modifier.height(8.dp))
             TrackSlider(position, trackDuration, s.buffering, onSeek = { engine.seekTo(it) })
+            // Keeps the title, chip and slider where they were when the bar sat below the slider.
+            if (workBar) Spacer(Modifier.height(with(density) { workBarHeight.toDp() }))
 
             Spacer(Modifier.height(8.dp))
             Controls(s, settings.skipBackSec, settings.skipForwardSec, graph)
