@@ -177,20 +177,6 @@ fun LibraryScreen(
         },
     ) { padding ->
         Column(Modifier.padding(top = padding.calculateTopPadding()).fillMaxSize()) {
-            scan?.let { s ->
-                Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp)) {
-                    if (s.total > 0) LinearProgressIndicator(progress = { s.done.toFloat() / s.total }, Modifier.fillMaxWidth())
-                    else LinearProgressIndicator(Modifier.fillMaxWidth())
-                    Text(
-                        if (s.total > 0) "Scanning ${s.done}/${s.total}  ${s.current}" else "Looking for works…",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1, overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.padding(top = 4.dp),
-                    )
-                }
-            }
-
             if (categories.size + (if (hasUncategorized) 1 else 0) > 1) {
                 LazyRow(
                     contentPadding = PaddingValues(horizontal = 16.dp),
