@@ -155,9 +155,20 @@ private fun PlayerContent(graph: AppGraph, onCollapse: () -> Unit, onOpenEntry: 
                 IconButton(onClick = { sheet = Sheet.SEGMENTS }) { Icon(Icons.AutoMirrored.Rounded.QueueMusic, "Segments") }
             }
 
-            // Artwork or subtitles
-            Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                AnimatedContent(showSubs && cues.isNotEmpty(), label = "art") { subs ->
+            // Whole-work bar, then artwork or subtitles
+            // The cover stays centered and the bar sits midway between the top bar and the cover.
+            Column(Modifier.weight(1f).fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+                val subsShown = showSubs && cues.isNotEmpty()
+                val multi = version.tracks.size > 1
+                if (!subsShown) Spacer(Modifier.weight(1f))
+                if (multi) {
+                    Box(Modifier.widthIn(max = 420.dp)) {
+                        WorkBar(version, durations, s.index, position, onSeekTrack = { engine.seekToTrack(it) }, onSeekGlobal = { engine.seekGlobal(it) })
+                    }
+                    if (!subsShown) Spacer(Modifier.weight(1f))
+                    Spacer(Modifier.height(8.dp))
+                }
+                AnimatedContent(subsShown, label = "art", modifier = if (subsShown) Modifier.weight(1f) else Modifier) { subs ->
                     if (subs) CuePanel(cues, position, onSeek = { engine.seekTo(it) })
                     else CoverImage(
                         entry.coverFor(settings, Cover.SIZE_LARGE),
@@ -165,6 +176,7 @@ private fun PlayerContent(graph: AppGraph, onCollapse: () -> Unit, onOpenEntry: 
                         corner = 24.dp,
                     )
                 }
+                if (!subsShown) Spacer(Modifier.weight(if (multi) 2f else 1f))
             }
             if (!showSubs && cues.isNotEmpty()) {
                 val cue = cues.lastOrNull { position >= it.startMs && position < it.endMs }
@@ -190,10 +202,6 @@ private fun PlayerContent(graph: AppGraph, onCollapse: () -> Unit, onOpenEntry: 
 
             Spacer(Modifier.height(8.dp))
             TrackSlider(position, trackDuration, s.buffering, onSeek = { engine.seekTo(it) })
-
-            if (version.tracks.size > 1) {
-                WorkBar(version, durations, s.index, position, onSeekTrack = { engine.seekToTrack(it) }, onSeekGlobal = { engine.seekGlobal(it) })
-            }
 
             Spacer(Modifier.height(8.dp))
             Controls(s, settings.skipBackSec, settings.skipForwardSec, graph)
