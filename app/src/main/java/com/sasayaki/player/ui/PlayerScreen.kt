@@ -72,7 +72,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
@@ -86,7 +85,6 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -139,9 +137,8 @@ private fun PlayerContent(graph: AppGraph, onCollapse: () -> Unit, onOpenEntry: 
     var sheet by remember { mutableStateOf<Sheet?>(null) }
     var showSubs by rememberSaveable { mutableStateOf(false) }
     val track = s.track
-    val density = LocalDensity.current
-    val workBarEstimate = with(density) { (24.dp + MaterialTheme.typography.labelSmall.lineHeight.toDp()).roundToPx() }
-    var workBarHeight by remember { mutableIntStateOf(workBarEstimate) }
+    // Height of WorkBar: 4dp padding, 20dp bar and a labelSmall time line.
+    val workBarSpace = 24.dp + with(LocalDensity.current) { MaterialTheme.typography.labelSmall.lineHeight.toDp() }
 
     val cues by produceState<List<Cue>>(emptyList(), track?.subtitle) {
         value = track?.subtitle?.let { withContext(Dispatchers.IO) { Subtitles.load(it) } } ?: emptyList()
@@ -168,7 +165,7 @@ private fun PlayerContent(graph: AppGraph, onCollapse: () -> Unit, onOpenEntry: 
                 val subsShown = showSubs && cues.isNotEmpty()
                 if (!subsShown) Spacer(Modifier.weight(1f))
                 if (workBar) {
-                    Box(Modifier.widthIn(max = 420.dp).onSizeChanged { workBarHeight = it.height }) {
+                    Box(Modifier.widthIn(max = 420.dp)) {
                         WorkBar(version, durations, s.index, position, onSeekTrack = { engine.seekToTrack(it) }, onSeekGlobal = { engine.seekGlobal(it) })
                     }
                     if (!subsShown) Spacer(Modifier.weight(1f))
@@ -206,10 +203,11 @@ private fun PlayerContent(graph: AppGraph, onCollapse: () -> Unit, onOpenEntry: 
                 enabled = entry.versions.size > 1,
             )
 
-            Spacer(Modifier.height(8.dp))
+            // The slider is centered in the space the work bar used to share with it, so the
+            // title and chip stay put whether or not the bar is shown.
+            Spacer(Modifier.height(8.dp + workBarSpace / 2))
             TrackSlider(position, trackDuration, s.buffering, onSeek = { engine.seekTo(it) })
-            // Keeps the title, chip and slider where they were when the bar sat below the slider.
-            if (workBar) Spacer(Modifier.height(with(density) { workBarHeight.toDp() }))
+            Spacer(Modifier.height(workBarSpace / 2))
 
             Spacer(Modifier.height(8.dp))
             Controls(s, settings.skipBackSec, settings.skipForwardSec, graph)
