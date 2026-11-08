@@ -26,14 +26,7 @@ SASAYAKI_OUT="$TEMP/scan-dump.txt" ./gradlew :app:testDebugUnitTest --tests "*Sc
 
 `CoverSeedSampleTest` does the same for cover colors: it renders each sample cover next to the dark and light surface, accent and secondary colors picked from it, to `SASAYAKI_SEEDS_OUT` (default `app/build/cover-seeds.png`). Render it before and after changing `CoverSeed` and compare.
 
-Release builds are signed with the key described in `keystore.properties` at the project root (git-ignored, like `*.jks`). Without that file they fall back to the debug key, so they still install over a debug build:
-
-```properties
-storeFile=C:/path/to/sasayaki.jks
-storePassword=...
-keyAlias=...
-keyPassword=...
-```
+Release builds are signed with the key described in `keystore.properties` at the project root (git-ignored, like `*.jks`); without that file they fall back to the debug key. Don't read or print that file, it holds the key's passwords. Debug builds are a separate app, `com.sasayaki.player.debug` ("Sasayaki Debug"), so they install next to the release app `com.sasayaki.player` without touching its data.
 
 R8 strips anything reached only by reflection. After adding serialized classes, libraries or anything instantiated by name (services, providers, Coil components), check the release build on the device as well.
 
@@ -52,6 +45,8 @@ Assume the user knows common UI and design patterns. Don't add labels, captions 
 - Do not run Kotlin source containing regex backslashes through Python or shell heredoc string replacement. It silently turns `\\` into `\` and breaks the regexes in `Naming.kt` and `CoverPicker.kt`. Use the Edit tool for those files.
 - MP3s in the sample library are CBR without Xing/LAME headers. The extractor has constant-bitrate seeking enabled. Seamless segment transitions depend on ExoPlayer loading the next playlist item in advance; there is no encoder-delay metadata to trim.
 
-## Committing
+## Finishing a task
+
+Once a task's changes work in the debug build on the phone, build the release APK and install it over the release app with `adb install -r`, so the phone always runs the latest release build. If the phone isn't reachable over adb, say so instead of skipping it silently.
 
 After finishing and passing the necessary checks, commit the task's changes unless the user asks not to or to leave them uncommitted. Use Conventional Commits, with a closing keyword when implementing or fixing a GitHub issue.
