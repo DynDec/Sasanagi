@@ -10,12 +10,12 @@ import kotlin.math.sin
 
 /**
  * Material-style tones of a color: its hue, at CIE L* lightness [tone] (Material's tone scale), keeping
- * as much chroma as sRGB allows. Lab hue stands in for HCT, which is close enough for one accent color.
+ * as much chroma as sRGB and [maxChroma] allow. Lab hue stands in for HCT, which is close enough for one accent color.
  */
 object Tones {
-    fun tone(argb: Int, tone: Double): Int {
+    fun tone(argb: Int, tone: Double, maxChroma: Double = Double.MAX_VALUE): Int {
         val lab = toLab(argb)
-        val chroma = hypot(lab[1], lab[2])
+        val chroma = minOf(hypot(lab[1], lab[2]), maxChroma)
         val hue = atan2(lab[2], lab[1])
         fun at(c: Double) = fromLab(tone, c * cos(hue), c * sin(hue))
         at(chroma)?.let { return it }

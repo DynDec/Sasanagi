@@ -93,6 +93,7 @@ import androidx.compose.ui.unit.dp
 import androidx.media3.common.Player
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sasayaki.player.AppGraph
+import com.sasayaki.player.ui.theme.CoverTinted
 import com.sasayaki.player.data.Cover
 import com.sasayaki.player.data.Cue
 import com.sasayaki.player.data.Subtitles
@@ -107,9 +108,18 @@ import kotlin.math.roundToInt
 
 private enum class Sheet { SEGMENTS, SPEED, BOOST, SLEEP, VERSIONS }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PlayerScreen(graph: AppGraph, onCollapse: () -> Unit, onOpenEntry: () -> Unit) {
+    val s by graph.engine.state.collectAsStateWithLifecycle()
+    val settings by graph.settings.settings.collectAsStateWithLifecycle()
+    CoverTinted(s.entry?.coverFor(settings), graph.covers, settings.coverTint) {
+        PlayerContent(graph, onCollapse, onOpenEntry)
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun PlayerContent(graph: AppGraph, onCollapse: () -> Unit, onOpenEntry: () -> Unit) {
     val engine = graph.engine
     val s by engine.state.collectAsStateWithLifecycle()
     val settings by graph.settings.settings.collectAsStateWithLifecycle()

@@ -125,6 +125,9 @@ fun SettingsScreen(graph: AppGraph, bottomPadding: androidx.compose.ui.unit.Dp, 
             item {
                 ColorRow(ColorRole.SECONDARY, settings.secondaryColor, isDark(settings.theme)) { c -> update { it.copy(secondaryColor = c) } }
             }
+            item {
+                SwitchRow("Tint backgrounds from covers", null, settings.coverTint) { v -> update { it.copy(coverTint = v) } }
+            }
 
             item { SectionTitle("Playback") }
             item {

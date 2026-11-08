@@ -25,6 +25,7 @@ data class Settings(
     val dynamicColor: Boolean = false,
     val accentColor: Int? = null,
     val secondaryColor: Int? = null,
+    val coverTint: Boolean = true,
     val preferLossless: Boolean = true,
     val skipBackSec: Int = 10,
     val skipForwardSec: Int = 30,
@@ -43,6 +44,7 @@ class SettingsRepository(private val context: Context, scope: CoroutineScope) {
         val dynamic = booleanPreferencesKey("dynamic_color")
         val accent = intPreferencesKey("accent_color")
         val secondary = intPreferencesKey("secondary_color")
+        val coverTint = booleanPreferencesKey("cover_tint")
         val lossless = booleanPreferencesKey("prefer_lossless")
         val back = intPreferencesKey("skip_back")
         val fwd = intPreferencesKey("skip_forward")
@@ -60,6 +62,7 @@ class SettingsRepository(private val context: Context, scope: CoroutineScope) {
         dynamicColor = p[K.dynamic] ?: false,
         accentColor = p[K.accent],
         secondaryColor = p[K.secondary],
+        coverTint = p[K.coverTint] ?: true,
         preferLossless = p[K.lossless] ?: true,
         skipBackSec = p[K.back] ?: 10,
         skipForwardSec = p[K.fwd] ?: 30,
@@ -85,6 +88,7 @@ class SettingsRepository(private val context: Context, scope: CoroutineScope) {
             p[K.dynamic] = s.dynamicColor
             if (s.accentColor != null) p[K.accent] = s.accentColor else p.remove(K.accent)
             if (s.secondaryColor != null) p[K.secondary] = s.secondaryColor else p.remove(K.secondary)
+            p[K.coverTint] = s.coverTint
             p[K.lossless] = s.preferLossless
             p[K.back] = s.skipBackSec
             p[K.fwd] = s.skipForwardSec

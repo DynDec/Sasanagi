@@ -87,6 +87,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sasayaki.player.AppGraph
+import com.sasayaki.player.ui.theme.CoverTinted
 import com.sasayaki.player.data.Cover
 import com.sasayaki.player.data.Doc
 import com.sasayaki.player.data.Entry
@@ -110,9 +111,23 @@ fun Entry.versionGroups(): List<VersionGroup> =
 
 fun Entry.preferredVersion(preferLossless: Boolean): Version? = versionGroups().firstOrNull()?.preferred(preferLossless)
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun EntryScreen(
+    graph: AppGraph,
+    entry: Entry,
+    bottomPadding: Dp,
+    onBack: () -> Unit,
+    onOpenPlayer: () -> Unit,
+) {
+    val settings by graph.settings.settings.collectAsStateWithLifecycle()
+    CoverTinted(entry.coverFor(settings), graph.covers, settings.coverTint) {
+        EntryContent(graph, entry, bottomPadding, onBack, onOpenPlayer)
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@Composable
+private fun EntryContent(
     graph: AppGraph,
     entry: Entry,
     bottomPadding: Dp,

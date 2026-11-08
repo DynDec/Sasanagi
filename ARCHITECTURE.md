@@ -133,6 +133,7 @@ The JSON files are written by `JsonStore`, which writes to a temp file and then 
 ## UI (`ui/`)
 
 - Jetpack Compose with Material 3, dark theme by default (`ui/theme`). User-picked accent and secondary colors (`ui/ColorPicker.kt`) replace the four primary and four secondary roles respectively of whichever scheme is active, including dynamic color. `Tones` derives them from the picked color at Material's tones (L\* 80/20/30/90 in dark, 40/100/90/10 in light), using CIE Lab hue with chroma reduced to fit sRGB.
+- The entry and player screens tint their surface roles from the cover (`ui/theme/CoverTint.kt`, switchable in settings). The seed is the chroma-weighted dominant Lab hue of the cached thumbnail, kept in an in-memory LRU; mostly gray covers get no seed and keep the normal palette. Each surface keeps its L\* and takes the seed's hue at Lab chroma 10, so contrast with text is unchanged. Colors fade over 400 ms when the cover changes.
 - There is no navigation library. `MainActivity` keeps a stack of `Route`s (Library, Entry, Settings). The full-screen player, the mini player and the folder picker are overlays drawn on top of it.
 - Screens read repository and engine `StateFlow`s directly; there are no view models. Playback position is polled while a screen is visible (`rememberPosition`).
 - `FolderPicker` browses storage volumes directly, which the all-files access permission allows.
