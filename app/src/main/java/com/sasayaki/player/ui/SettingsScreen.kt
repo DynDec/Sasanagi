@@ -128,6 +128,9 @@ fun SettingsScreen(graph: AppGraph, bottomPadding: androidx.compose.ui.unit.Dp, 
             item {
                 SwitchRow("Colors from covers", null, settings.coverTint) { v -> update { it.copy(coverTint = v) } }
             }
+            item {
+                SwitchRow("Whole-work progress", null, settings.workBar) { v -> update { it.copy(workBar = v) } }
+            }
 
             item { SectionTitle("Playback") }
             item {

@@ -159,9 +159,9 @@ private fun PlayerContent(graph: AppGraph, onCollapse: () -> Unit, onOpenEntry: 
             // The cover stays centered and the bar sits midway between the top bar and the cover.
             Column(Modifier.weight(1f).fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
                 val subsShown = showSubs && cues.isNotEmpty()
-                val multi = version.tracks.size > 1
+                val workBar = settings.workBar && version.tracks.size > 1
                 if (!subsShown) Spacer(Modifier.weight(1f))
-                if (multi) {
+                if (workBar) {
                     Box(Modifier.widthIn(max = 420.dp)) {
                         WorkBar(version, durations, s.index, position, onSeekTrack = { engine.seekToTrack(it) }, onSeekGlobal = { engine.seekGlobal(it) })
                     }
@@ -176,7 +176,7 @@ private fun PlayerContent(graph: AppGraph, onCollapse: () -> Unit, onOpenEntry: 
                         corner = 24.dp,
                     )
                 }
-                if (!subsShown) Spacer(Modifier.weight(if (multi) 2f else 1f))
+                if (!subsShown) Spacer(Modifier.weight(if (workBar) 2f else 1f))
             }
             if (!showSubs && cues.isNotEmpty()) {
                 val cue = cues.lastOrNull { position >= it.startMs && position < it.endMs }
