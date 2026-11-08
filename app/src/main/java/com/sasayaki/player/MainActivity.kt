@@ -49,6 +49,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -188,25 +189,35 @@ private fun App(graph: AppGraph, openPlayer: androidx.compose.runtime.MutableSta
     val navBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     val bottomPadding = miniHeight + navBottom
     val top = stack.last()
+    // Keeps each back stack screen's saveable state (scroll positions etc.) while it's covered.
+    val screens = rememberSaveableStateHolder()
+    fun screenKey(index: Int, route: Route) = "$index/$route"
+    fun pop() {
+        if (stack.size <= 1) return
+        screens.removeState(screenKey(stack.lastIndex, stack.last()))
+        stack.removeAt(stack.lastIndex)
+    }
 
     BackHandler(enabled = openPlayer.value) { openPlayer.value = false }
-    BackHandler(enabled = !openPlayer.value && !picker && stack.size > 1) { stack.removeAt(stack.lastIndex) }
+    BackHandler(enabled = !openPlayer.value && !picker && stack.size > 1) { pop() }
 
     Box(Modifier.fillMaxSize()) {
-        AnimatedContent(top, transitionSpec = { fadeIn() togetherWith fadeOut() }, label = "nav") { route ->
-            when (route) {
-                Route.Library -> LibraryScreen(
-                    graph, bottomPadding,
-                    onOpen = { stack.add(Route.Entry(it.id)) },
-                    onSettings = { stack.add(Route.Settings) },
-                    onAddFolder = { picker = true },
-                )
-                is Route.Entry -> {
-                    val entry = remember(library, route.id) { graph.library.entry(route.id) }
-                    if (entry == null) LaunchedEffect(Unit) { if (stack.size > 1) stack.removeAt(stack.lastIndex) }
-                    else EntryScreen(graph, entry, bottomPadding, onBack = { stack.removeAt(stack.lastIndex) }, onOpenPlayer = { openPlayer.value = true })
+        AnimatedContent(stack.lastIndex to top, transitionSpec = { fadeIn() togetherWith fadeOut() }, label = "nav") { (index, route) ->
+            screens.SaveableStateProvider(screenKey(index, route)) {
+                when (route) {
+                    Route.Library -> LibraryScreen(
+                        graph, bottomPadding,
+                        onOpen = { stack.add(Route.Entry(it.id)) },
+                        onSettings = { stack.add(Route.Settings) },
+                        onAddFolder = { picker = true },
+                    )
+                    is Route.Entry -> {
+                        val entry = remember(library, route.id) { graph.library.entry(route.id) }
+                        if (entry == null) LaunchedEffect(Unit) { pop() }
+                        else EntryScreen(graph, entry, bottomPadding, onBack = { pop() }, onOpenPlayer = { openPlayer.value = true })
+                    }
+                    Route.Settings -> SettingsScreen(graph, bottomPadding, onBack = { pop() }, onAddFolder = { picker = true })
                 }
-                Route.Settings -> SettingsScreen(graph, bottomPadding, onBack = { stack.removeAt(stack.lastIndex) }, onAddFolder = { picker = true })
             }
         }
 
