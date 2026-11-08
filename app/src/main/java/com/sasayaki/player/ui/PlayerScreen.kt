@@ -207,12 +207,10 @@ private fun PlayerContent(graph: AppGraph, onCollapse: () -> Unit, onOpenEntry: 
             // title and chip stay put whether or not the bar is shown.
             Spacer(Modifier.height(8.dp + workBarSpace / 2))
             TrackSlider(position, trackDuration, s.buffering, onSeek = { engine.seekTo(it) })
-            Spacer(Modifier.height(workBarSpace / 2))
-
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(workBarSpace / 2 - 8.dp))
             Controls(s, settings.skipBackSec, settings.skipForwardSec, graph)
 
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(24.dp))
             Row(Modifier.fillMaxWidth().padding(bottom = 8.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
                 TextButton(onClick = { sheet = Sheet.SPEED }) {
                     Icon(Icons.Rounded.Speed, null, Modifier.size(20.dp))
