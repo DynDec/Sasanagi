@@ -18,13 +18,14 @@ object CoverSeed {
      * cover brown. Pixels in that hue band ([WARM_FROM]..[WARM_TO] degrees, orange through yellow) count for
      * this much up to [WARM_MUTED] chroma. Pink skin, blush and their shading continue it down to [PINK_FROM]
      * degrees, except dark saturated pixels (L* up to [PINK_MIN_L], chroma [RED_MIN_CHROMA] or more), which are
-     * reds and deep pinks the artist chose. Blush and skin shading reach well past 40 chroma, so the weight
+     * reds and deep pinks the artist chose. Cooler pinks past [PINK_FROM] are fabric, curtains and ribbons, not
+     * skin, and count fully even when pale. Blush and skin shading reach well past 40 chroma, so the weight
      * only returns to full at [WARM_VIVID].
      */
     private const val WARM_WEIGHT = 0.1
     private const val WARM_FROM = 20.0
     private const val WARM_TO = 90.0
-    private const val PINK_FROM = 330.0
+    private const val PINK_FROM = 350.0
     private const val PINK_MIN_L = 50.0
     private const val RED_MIN_CHROMA = 30.0
     private const val WARM_MUTED = 45.0
