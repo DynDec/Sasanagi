@@ -18,7 +18,7 @@ Stack: Kotlin and Jetpack Compose (Material 3), Media3/ExoPlayer, Coil 3, kotlin
 ./gradlew :app:testDebugUnitTest --tests "*ScanSampleTest*"   # single test
 ```
 
-`ScanSampleTest` is the main tool for working on scanning heuristics. It runs the real scanner on a library folder (`SASAYAKI_SAMPLE`, default `C:/Users/User/Documents/ASMR`) and writes how every entry, version and track was interpreted to `SASAYAKI_OUT` (default `app/build/scan-dump.txt`). If the folder is missing, the test is skipped. After changing anything in `data/scan/`, rerun it and diff the dump against the previous one to catch regressions:
+`ScanSampleTest` is the main tool for working on scanning heuristics. It runs the real scanner on a library folder (`SASAYAKI_SAMPLE`, set as a user environment variable on the dev machine) and writes how every entry, version and track was interpreted to `SASAYAKI_OUT` (default `app/build/scan-dump.txt`). If the variable is unset or the folder is missing, the test is skipped. After changing anything in `data/scan/`, rerun it and diff the dump against the previous one to catch regressions:
 
 ```bash
 SASAYAKI_OUT="$TEMP/scan-dump.txt" ./gradlew :app:testDebugUnitTest --tests "*ScanSampleTest*"

@@ -19,7 +19,9 @@ import javax.imageio.ImageIO
 class CoverSeedSampleTest {
     @Test
     fun renderSampleSeeds() {
-        val root = File(System.getenv("SASAYAKI_SAMPLE") ?: "C:/Users/User/Documents/ASMR")
+        val path = System.getenv("SASAYAKI_SAMPLE")
+        assumeTrue(path != null)
+        val root = File(path!!)
         assumeTrue(root.isDirectory)
         val row = 120
         // Covers are often 10+ MB; keep only downscaled copies.

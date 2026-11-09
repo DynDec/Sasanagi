@@ -9,7 +9,9 @@ import java.io.File
 class ScanSampleTest {
     @Test
     fun dumpSampleLibrary() {
-        val root = File(System.getenv("SASAYAKI_SAMPLE") ?: "C:/Users/User/Documents/ASMR")
+        val path = System.getenv("SASAYAKI_SAMPLE")
+        assumeTrue(path != null)
+        val root = File(path!!)
         assumeTrue(root.isDirectory)
         val entries = LibraryScanner(fillPartial = true).scan(listOf(root))
         val out = StringBuilder()
