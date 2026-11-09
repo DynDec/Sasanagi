@@ -269,7 +269,7 @@ class PlaybackEngine(
             .setMimeType(mimeFor(t.format))
             .setMediaMetadata(
                 MediaMetadata.Builder()
-                    .setTitle(if (n > 1) "${i + 1}/$n  ${t.title}" else t.title)
+                    .setTitle(t.title)
                     .setArtist(entry.title)
                     .setAlbumTitle(version.label)
                     .setTrackNumber(i + 1)
