@@ -1,8 +1,8 @@
-# Sasayaki
+# Sasanagi
 
-**Sasayaki** is a native Android audio player built for local Japanese ASMR and voice works.
+**Sasanagi** is a native Android audio player built for local Japanese ASMR and voice works.
 
-DLsite-style downloads rarely fit the folder-as-album model of standard music and audiobook players: a single work often ships with multiple versions (with/without sound effects, ear-swapped, MP3 alongside WAV), partial variant folders that only re-record specific tracks, nested category directories, accompanying scripts/illustrations, and ZIP archives with Shift-JIS or UTF-8 filenames. Sasayaki is designed to understand that structure out of the box and play everything **in place** without copying or extracting files into app storage.
+DLsite-style downloads rarely fit the folder-as-album model of standard music and audiobook players: a single work often ships with multiple versions (with/without sound effects, ear-swapped, MP3 alongside WAV), partial variant folders that only re-record specific tracks, nested category directories, accompanying scripts/illustrations, and ZIP archives with Shift-JIS or UTF-8 filenames. Sasanagi is designed to understand that structure out of the box and play everything **in place** without copying or extracting files into app storage.
 
 ---
 
@@ -40,7 +40,7 @@ DLsite-style downloads rarely fit the folder-as-album model of standard music an
 ## Requirements & Permissions
 
 - **Android 8.0 (API 26)** or higher.
-- **All Files Access (`MANAGE_EXTERNAL_STORAGE`):** Required so Sasayaki can scan library folders and seek directly inside large audio files and ZIP archives in place without copying them into app storage.
+- **All Files Access (`MANAGE_EXTERNAL_STORAGE`):** Required so Sasanagi can scan library folders and seek directly inside large audio files and ZIP archives in place without copying them into app storage.
 
 ---
 

@@ -150,7 +150,7 @@ fun LibraryScreen(
                         )
                         LaunchedEffect(Unit) { focus.requestFocus() }
                     } else {
-                        Text("Sasayaki")
+                        Text("Sasanagi")
                     }
                 },
                 actions = {

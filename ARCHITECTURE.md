@@ -1,6 +1,6 @@
 # Architecture
 
-Sasayaki is a single-module Android app (`:app`, package `com.sasayaki.player`). This document describes how the pieces fit together. Build commands and working conventions are in [CLAUDE.md](CLAUDE.md).
+Sasanagi is a single-module Android app (`:app`, package `com.sasayaki.player`). This document describes how the pieces fit together. Build commands and working conventions are in [CLAUDE.md](CLAUDE.md).
 
 ## Constraint: everything is read in place
 

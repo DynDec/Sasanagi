@@ -162,7 +162,7 @@ class MainActivity : ComponentActivity() {
             Text("Storage access", style = MaterialTheme.typography.headlineSmall)
             Spacer(Modifier.height(12.dp))
             Text(
-                "Sasayaki plays your works straight from their folders and ZIP archives, without copying them. " +
+                "Sasanagi plays your works straight from their folders and ZIP archives, without copying them. " +
                     "To read them in place it needs access to all files.",
                 textAlign = TextAlign.Center,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,

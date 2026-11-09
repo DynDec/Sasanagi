@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-Sasayaki (`com.sasayaki.player`) is a native Android audio player for local Japanese ASMR works. Its core job is making sense of how DLsite-style downloads are organized: version folders (SE有り/無し, 左右反転, mp3/wav), audio split into segments, nested category folders, and ZIP archives. Everything is read **in place** under all-files access (`MANAGE_EXTERNAL_STORAGE`). Audio, documents and images must never be copied or extracted into app storage; the only exception is downscaled cover thumbnails in `cacheDir/covers`.
+Sasanagi (`com.sasayaki.player`) is a native Android audio player for local Japanese ASMR works. Its core job is making sense of how DLsite-style downloads are organized: version folders (SE有り/無し, 左右反転, mp3/wav), audio split into segments, nested category folders, and ZIP archives. Everything is read **in place** under all-files access (`MANAGE_EXTERNAL_STORAGE`). Audio, documents and images must never be copied or extracted into app storage; the only exception is downscaled cover thumbnails in `cacheDir/covers`.
 
 Stack: Kotlin and Jetpack Compose (Material 3), Media3/ExoPlayer, Coil 3, kotlinx.serialization, DataStore. AGP 9 with built-in Kotlin, so there is no `kotlin-android` plugin. compileSdk 36, minSdk 26, Java 17 with core library desugaring. Dependency versions live in `gradle/libs.versions.toml`.
 
@@ -26,7 +26,7 @@ SASAYAKI_OUT="$TEMP/scan-dump.txt" ./gradlew :app:testDebugUnitTest --tests "*Sc
 
 `CoverSeedSampleTest` does the same for cover colors: it renders each sample cover next to the dark and light surface, accent and secondary colors picked from it, to `SASAYAKI_SEEDS_OUT` (default `app/build/cover-seeds.png`). Render it before and after changing `CoverSeed` and compare.
 
-Release builds are signed with the key described in `keystore.properties` at the project root (git-ignored, like `*.jks`); without that file they fall back to the debug key. Don't read or print that file, it holds the key's passwords. Debug builds are a separate app, `com.sasayaki.player.debug` ("Sasayaki Debug"), so they install next to the release app `com.sasayaki.player` without touching its data.
+Release builds are signed with the key described in `keystore.properties` at the project root (git-ignored, like `*.jks`); without that file they fall back to the debug key. Don't read or print that file, it holds the key's passwords. Debug builds are a separate app, `com.sasayaki.player.debug` ("Sasanagi Debug"), so they install next to the release app `com.sasayaki.player` without touching its data.
 
 R8 strips anything reached only by reflection. After adding serialized classes, libraries or anything instantiated by name (services, providers, Coil components), check the release build on the device as well.
 
